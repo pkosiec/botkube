@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -40,13 +41,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	cacheddiscovery "k8s.io/client-go/discovery/cached"
+	diskcached "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
 
 var (
@@ -76,44 +78,45 @@ var (
 )
 
 const hyperlinkRegex = `(?m)<http:\/\/[a-z.0-9\/\-_=]*\|([a-z.0-9\/\-_=]*)>`
+const defaultCacheTTL = time.Duration(6 * time.Hour)
+
+var (
+	defaultCacheDir       = filepath.Join(homedir.HomeDir(), ".kube", "cache")
+	defaultKubeconfigPath = filepath.Join(homedir.HomeDir(), ".kube", "config")
+)
 
 // InitKubeClient creates K8s client from provided kubeconfig OR service account to interact with apiserver
 func InitKubeClient() {
 	kubeConfig, err := rest.InClusterConfig()
 	if err != nil {
-		kubeconfigPath := os.Getenv("KUBECONFIG")
-		if kubeconfigPath == "" {
-			kubeconfigPath = os.Getenv("HOME") + "/.kube/config"
+		kubeconfigPath, exists := os.LookupEnv("KUBECONFIG")
+		if !exists {
+			kubeconfigPath = defaultKubeconfigPath
 		}
-		botkubeConf, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// Initiate discovery client for REST resource mapping
-		DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(botkubeConf)
-		if err != nil {
-			log.Fatalf("Unable to create Discovery Client")
-		}
-		DynamicKubeClient, err = dynamic.NewForConfig(botkubeConf)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		// Initiate discovery client for REST resource mapping
-		DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(kubeConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-		DynamicKubeClient, err = dynamic.NewForConfig(kubeConfig)
+
+		kubeConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	discoCacheClient := cacheddiscovery.NewMemCacheClient(DiscoveryClient)
-	discoCacheClient.Invalidate()
-	Mapper = restmapper.NewDeferredDiscoveryRESTMapper(discoCacheClient)
+	// Initiate discovery client for REST resource mapping
 
+	// Use the same cache directories as kubectl to not discover API groups by kubectl executor again
+	discoveryCacheDir := computeDiscoverCacheDir(filepath.Join(defaultCacheDir, "discovery"), kubeConfig.Host)
+	httpCacheDir := filepath.Join(defaultCacheDir, "http")
+
+	cachedDiscoveryClient, err := diskcached.NewCachedDiscoveryClientForConfig(kubeConfig, discoveryCacheDir, httpCacheDir, defaultCacheTTL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	DiscoveryClient = cachedDiscoveryClient
+	DynamicKubeClient, err = dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	Mapper = restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscoveryClient)
 }
 
 // EventKind used in AllowedEventKindsMap to filter event kinds
@@ -419,4 +422,21 @@ func RemoveHyperlink(hyperlink string) string {
 		}
 	}
 	return command
+}
+
+//
+// Copied from https://github.com/kubernetes/cli-runtime/blob/v0.20.5/pkg/genericclioptions/config_flags.go
+// Licensed under the Apache License 2.0. Copyright 2018 The Kubernetes Authors.
+//
+
+// overlyCautiousIllegalFileCharacters matches characters that *might* not be supported.  Windows is really restrictive, so this is really restrictive
+var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
+
+// computeDiscoverCacheDir takes the parentDir and the host and comes up with a "usually non-colliding" name.
+func computeDiscoverCacheDir(parentDir, host string) string {
+	// strip the optional scheme from host if its there:
+	schemelessHost := strings.Replace(strings.Replace(host, "https://", "", 1), "http://", "", 1)
+	// now do a simple collapse of non-AZ09 characters.  Collisions are possible but unlikely.  Even if we do collide the problem is short lived
+	safeHost := overlyCautiousIllegalFileCharacters.ReplaceAllString(schemelessHost, "_")
+	return filepath.Join(parentDir, safeHost)
 }
