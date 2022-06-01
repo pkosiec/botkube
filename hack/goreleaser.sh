@@ -55,21 +55,21 @@ release_pr_snapshot() {
   export GORELEASER_CURRENT_TAG=v${PR_NUMBER}
   goreleaser release --rm-dist --snapshot --skip-publish
 	# Re-tag with 'pr' prefix
-  docker tag ghcr.io/infracloudio/botkube:${GORELEASER_CURRENT_TAG}-amd64 ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-amd64
-  docker tag ghcr.io/infracloudio/botkube:${GORELEASER_CURRENT_TAG}-arm64 ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-arm64
-  docker tag ghcr.io/infracloudio/botkube:${GORELEASER_CURRENT_TAG}-armv7 ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-armv7
+  docker tag ghcr.io/mszostok/botkube:${GORELEASER_CURRENT_TAG}-amd64 ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-amd64
+  docker tag ghcr.io/mszostok/botkube:${GORELEASER_CURRENT_TAG}-arm64 ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-arm64
+  docker tag ghcr.io/mszostok/botkube:${GORELEASER_CURRENT_TAG}-armv7 ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-armv7
 
 
   # Push images
-  docker push ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-amd64
-  docker push ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-arm64
-  docker push ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-armv7
+  docker push ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-amd64
+  docker push ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-arm64
+  docker push ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-armv7
   # Create manifest
-  docker manifest create ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG} \
-    --amend ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-amd64 \
-    --amend ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-arm64 \
-    --amend ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}-armv7
-  docker manifest push ghcr.io/infracloudio/pr/botkube:${GORELEASER_CURRENT_TAG}
+  docker manifest create ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG} \
+    --amend ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-amd64 \
+    --amend ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-arm64 \
+    --amend ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}-armv7
+  docker manifest push ghcr.io/mszostok/pr/botkube:${GORELEASER_CURRENT_TAG}
 }
 
 
