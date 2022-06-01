@@ -51,7 +51,7 @@ func main() {
 
 	// Set up global logger and filter engine
 	log.SetupGlobal()
-	log.Info("Hello")
+	log.Info("Hello v2")
 	filterengine.SetupGlobal()
 
 	errGroup := new(errgroup.Group)
