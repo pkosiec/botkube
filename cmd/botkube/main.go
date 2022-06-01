@@ -62,7 +62,7 @@ func main() {
 	notifiers := notify.ListNotifiers(conf.Communications)
 
 	if conf.Communications.Slack.Enabled {
-		log.Info("Starting slack bot")
+		log.Info("Starting Slack bot")
 		sb := bot.NewSlackBot(conf)
 		errGroup.Go(func() error {
 			return sb.Start()
@@ -70,7 +70,7 @@ func main() {
 	}
 
 	if conf.Communications.Mattermost.Enabled {
-		log.Info("Starting mattermost bot")
+		log.Info("Starting Mattermost bot")
 		mb := bot.NewMattermostBot(conf)
 		errGroup.Go(func() error {
 			return mb.Start()
