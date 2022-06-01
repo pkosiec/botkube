@@ -54,9 +54,12 @@ jobs:
           ### BotKube image published successfully! :rocket:
 
           To test BotKube with PR changes, run:
+
               gh pr checkout ${PR_NUMBER}
+
               helm install botkube -n botkube --create-namespace \\
               --set image.repository=infracloudio/pr/botkube \\
               --set image.tag=v${PR_NUMBER} \\
               ./helm/botkube
+
           ENDOFFILE
