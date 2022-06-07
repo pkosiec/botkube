@@ -98,7 +98,7 @@ serviceAccount:
 | ingress.tls.secretName | string | `""` |  |
 | ingress.urlPath | string | `"/"` |  |
 | logLevel | string | `"info"` |  |
-| logForceColors | bool | `false` |  |
+| logDisableColors | bool | `false` |  |
 | nameOverride | string | `""` |  |
 | nodeSelector | object | `{}` |  |
 | podSecurityPolicy.enabled | bool | `false` |  |
