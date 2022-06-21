@@ -114,7 +114,7 @@ To run the tests manually against the latest development version, follow these s
       slack:
         enabled: false # Tests will override this temporarily
         token: ${SLACK_BOT_TOKEN} # Provide a valid token for BotKube app
-        channel: botkube-test # Tests will override this temporarily
+        channel: "" # Tests will override this temporarily
     config:
       resources:
         - name: v1/configmaps
@@ -125,12 +125,20 @@ To run the tests manually against the latest development version, follow these s
             - create
             - update
             - delete
+        - name: v1/pods
+          namespaces:
+            include:
+              - botkube
+          events:
+            - create
       settings:
         clustername: sample
         kubectl:
           enabled: true
         upgradeNotifier: false
       enabled: true
+    extraAnnotations:
+      botkube.io/disable: "true"
     image:
       registry: docker.io
       repository: pkosiec/botkube 

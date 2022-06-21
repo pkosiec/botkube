@@ -162,7 +162,7 @@ jobs:
             slack:
               enabled: false # Tests will override this temporarily
               token: ${SLACK_BOT_TOKEN} # Provide a valid token for BotKube app
-              channel: botkube-test # Tests will override this temporarily
+              channel: "" # Tests will override this temporarily
           config:
             resources:
               - name: v1/configmaps
@@ -173,12 +173,20 @@ jobs:
                   - create
                   - update
                   - delete
+              - name: v1/pods
+                namespaces:
+                  include:
+                    - botkube
+                events:
+                  - create
             settings:
               clustername: sample
               kubectl:
                 enabled: true
               upgradeNotifier: false
             enabled: true
+          extraAnnotations:
+            botkube.io/disable: "true"
           image:
             registry: docker.io
             repository: pkosiec/botkube
@@ -195,7 +203,7 @@ jobs:
           ENDOFFILE
 
       - name: Install BotKube
-        run: "helm install botkube --namespace botkube ./helm/botkube -f $RUNNER_TEMP/values.yaml --wait"
+        run: "helm install botkube --namespace botkube ./helm/botkube -f $RUNNER_TEMP/values.yaml --wait --create-namespace"
 
       - name: Run tests
         run: "helm test botkube --namespace botkube --timeout=$INTEGRATION_TESTS_TIMEOUT --logs"

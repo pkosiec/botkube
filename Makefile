@@ -60,7 +60,7 @@ container-image-e2e-test:
 	$(eval TEST_NAME := "e2e")
 	$(eval IMAGE_SUFFIX := "$(TEST_NAME)-test")
 	$(eval DOCKER_TAG := "latest")
-	docker build -f ./test.Dockerfile --build-arg TEST_NAME=$(TEST_NAME) -t $(IMAGE_REPO)-$(IMAGE_SUFFIX):$(DOCKER_TAG) .
+	DOCKER_BUILDKIT=1 docker build -f ./test.Dockerfile --build-arg TEST_NAME=$(TEST_NAME) -t $(IMAGE_REPO)-$(IMAGE_SUFFIX):$(DOCKER_TAG) .
 
 # Publish release using goreleaser
 gorelease:

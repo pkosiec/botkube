@@ -70,7 +70,7 @@ save_pr_images() {
   docker save ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-armv7 > /tmp/${IMAGE_NAME}-armv7.tar
 
   # Build and save Test image
-  docker build -t ${IMAGE_REGISTRY}/pr/${TEST_IMAGE_NAME}:${GORELEASER_CURRENT_TAG} --build-arg TEST_NAME="e2e" -f ./test.Dockerfile .
+  DOCKER_BUILDKIT=1 docker build -t ${IMAGE_REGISTRY}/pr/${TEST_IMAGE_NAME}:${GORELEASER_CURRENT_TAG} --build-arg TEST_NAME="e2e" -f ./test.Dockerfile .
   docker save ${IMAGE_REGISTRY}/pr/${TEST_IMAGE_NAME}:${GORELEASER_CURRENT_TAG} > /tmp/${TEST_IMAGE_NAME}.tar
 }
 
