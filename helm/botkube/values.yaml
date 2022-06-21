@@ -510,7 +510,7 @@ extraObjects: []
 e2eTest:
   image:
     registry: docker.io
-    repository: pkosiec/botkube-test # TODO: Fix
+    repository: pkosiec/botkube-test # TODO: Replace with image built on `develop`
     tag: latest
     pullPolicy: Always
   deployment:

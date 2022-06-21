@@ -11,7 +11,7 @@ metadata:
     app: botkube
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: "{{ include "botkube.fullname" . }}-e2e-test"
   labels:
@@ -23,7 +23,7 @@ metadata:
     app: botkube
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: "{{ include "botkube.fullname" . }}-e2e-test"
 subjects:
   - kind: ServiceAccount
@@ -31,7 +31,7 @@ subjects:
     namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: "{{ include "botkube.fullname" . }}-e2e-test"
   labels:
@@ -50,6 +50,13 @@ rules:
       - create
       - get
       - update
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
       - delete
   - apiGroups:
       - "apps"
