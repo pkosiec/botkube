@@ -24,6 +24,7 @@ set -o pipefail
 
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/infracloudio}"
 IMAGE_NAME="${IMAGE_NAME:-botkube}"
+TEST_IMAGE_NAME="${IMAGE_NAME:-botkube-test}"
 
 prepare() {
   export DOCKER_CLI_EXPERIMENTAL="enabled"
@@ -46,7 +47,7 @@ release_snapshot() {
   docker manifest push ${IMAGE_REGISTRY}/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}
 }
 
-save_pr_image() {
+save_pr_images() {
   prepare
 
   if [ -z "${PR_NUMBER}" ]
@@ -63,13 +64,17 @@ save_pr_image() {
   docker tag ${IMAGE_REGISTRY}/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-arm64 ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-arm64
   docker tag ${IMAGE_REGISTRY}/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-armv7 ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-armv7
 
-  # Push images
+  # Save images
   docker save ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-amd64 > /tmp/${IMAGE_NAME}-amd64.tar
   docker save ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-arm64 > /tmp/${IMAGE_NAME}-arm64.tar
   docker save ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-armv7 > /tmp/${IMAGE_NAME}-armv7.tar
+
+  # Build and save Test image
+  docker build -t ${IMAGE_REGISTRY}/pr/${TEST_IMAGE_NAME}:${GORELEASER_CURRENT_TAG} --build-arg TEST_NAME="e2e" -f ./test.Dockerfile .
+  docker save ${IMAGE_REGISTRY}/pr/${TEST_IMAGE_NAME}:${GORELEASER_CURRENT_TAG} > /tmp/${TEST_IMAGE_NAME}.tar
 }
 
-push_pr_image() {
+push_pr_images() {
   prepare
   if [ -z "${PR_NUMBER}" ]
   then
@@ -84,10 +89,15 @@ push_pr_image() {
   docker load --input /tmp/${IMAGE_NAME}-arm64.tar
   docker load --input /tmp/${IMAGE_NAME}-armv7.tar
 
+  # tests
+  docker load --input /tmp/${TEST_IMAGE_NAME}.tar
+
 	# Push images
 	docker push ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-amd64
 	docker push ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-arm64
 	docker push ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG}-armv7
+
+	docker push ${IMAGE_REGISTRY}/pr/${TEST_IMAGE_NAME}:${GORELEASER_CURRENT_TAG}
 
   # Create manifest
   docker manifest create ${IMAGE_REGISTRY}/pr/${IMAGE_NAME}:${GORELEASER_CURRENT_TAG} \
@@ -140,10 +150,10 @@ case "${1}" in
   release_snapshot)
     release_snapshot
     ;;
-  save_pr_image)
-    save_pr_image
+  save_pr_images)
+    save_pr_images
     ;;
-  push_pr_image)
-    push_pr_image
+  push_pr_images)
+    push_pr_images
     ;;
 esac

@@ -2,7 +2,7 @@ IMAGE_REPO=ghcr.io/infracloudio/botkube
 TAG=$(shell cut -d'=' -f2- .release)
 
 .DEFAULT_GOAL := build
-.PHONY: release git-tag check-git-status container-image container-image-e2e-test test test-integration build pre-build publish lint lint-fix system-check
+.PHONY: release git-tag check-git-status container-image container-image-e2e-test test test-integration build pre-build publish lint lint-fix system-check save-pr-images push-pr-images
 
 # Show this help.
 help:
@@ -72,12 +72,12 @@ release-snapshot:
 	@./hack/goreleaser.sh release_snapshot
 
 # Build project and save PR images with PR_NUMBER tag
-save-pr-image:
-	@./hack/goreleaser.sh save_pr_image
+save-pr-images:
+	@./hack/goreleaser.sh save_pr_images
 
 # Load project and push PR images with PR_NUMBER tag
-push-pr-image:
-	@./hack/goreleaser.sh push_pr_image
+push-pr-images:
+	@./hack/goreleaser.sh push_pr_images
 
 # system checks
 system-check:
