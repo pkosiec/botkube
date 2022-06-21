@@ -27,7 +27,10 @@ on:
 
 env:
   GO_VERSION: 1.18
+  HELM_VERSION: v3.9.0
+  K3D_VERSION: v5.4.3
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  INTEGRATION_TESTS_TIMEOUT: 10m
 
 jobs:
 
@@ -59,7 +62,7 @@ jobs:
 
       - name: Save
         run: |
-          make save-pr-image
+          make save-pr-images
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -67,6 +70,8 @@ jobs:
           name: botkube-${{github.sha}}
           path: /tmp/*.tar
           retention-days: 1
+
+# TODO: Build and push test image
 
   push-image:
     name: Push BotKube image
@@ -97,7 +102,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push
-        run: make push-pr-image
+        run: make push-pr-images
 
       - name: Delete Docker image artifact
         uses: geekyeggo/delete-artifact@v1
@@ -119,3 +124,78 @@ jobs:
               ./helm/botkube
 
           ENDOFFILE
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+#    needs: [ push-image ] # TODO:
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Download k3d
+        run: "wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${K3D_VERSION} bash"
+
+      - name: Create cluster
+        run: "k3d cluster create botkube --wait --timeout=5m"
+
+      - name: Prepare BotKube values
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_TESTER_APP_TOKEN: ${{ secrets.SLACK_TESTER_APP_TOKEN }}
+        run: |
+          cat > ${RUNNER_TEMP}/values.yaml << ENDOFFILE
+          communications:
+            slack:
+              enabled: false # Tests will override this temporarily
+              token: ${SLACK_BOT_TOKEN} # Provide a valid token for BotKube app
+              channel: botkube-test # Tests will override this temporarily
+          config:
+            resources:
+              - name: v1/configmaps
+                namespaces:
+                  include:
+                    - botkube
+                events:
+                  - create
+                  - update
+                  - delete
+            settings:
+              clustername: sample
+              kubectl:
+                enabled: true
+              upgradeNotifier: false
+            enabled: true
+          image:
+            registry: docker.io
+            repository: pkosiec/botkube
+            tag: e2e-tests
+          e2eTest:
+            image:
+              registry: docker.io
+              repository: pkosiec/botkube-test
+              tag: latest
+              pullPolicy: Always
+            slack:
+              testerAppToken: "${SLACK_TESTER_APP_TOKEN}"
+              additionalContextMessage: "Pull request: ${PR_NUMBER}"
+          ENDOFFILE
+
+      - name: Install BotKube
+        run: "helm install botkube --namespace botkube ./helm/botkube -f $RUNNER_TEMP/values.yaml --wait"
+
+      - name: Run tests
+        run: "helm test botkube --namespace botkube --timeout=$INTEGRATION_TESTS_TIMEOUT --logs"
