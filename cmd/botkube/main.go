@@ -70,6 +70,8 @@ func main() {
 	ctx, cancelCtxFn := context.WithCancel(ctx)
 	defer cancelCtxFn()
 
+	logger.Info("Hello")
+
 	errGroup, ctx := errgroup.WithContext(ctx)
 
 	// Prometheus metrics
