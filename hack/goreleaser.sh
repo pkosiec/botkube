@@ -22,7 +22,7 @@
 set -o errexit
 set -o pipefail
 
-IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/infracloudio}"
+IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/pkosiec}"
 IMAGE_NAME="${IMAGE_NAME:-botkube}"
 TEST_IMAGE_NAME="${IMAGE_NAME:-botkube-test}"
 
