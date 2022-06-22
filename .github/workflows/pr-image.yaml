@@ -196,7 +196,7 @@ jobs:
             botkube.io/disable: "true"
           image:
             registry: ${IMAGE_REGISTRY}
-            repository: ${IMAGE_REGISTRY}
+            repository: ${IMAGE_REPOSITORY}
             tag: ${IMAGE_TAG}
           e2eTest:
             image:
