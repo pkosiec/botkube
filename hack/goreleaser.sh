@@ -84,12 +84,12 @@ load_and_push_images() {
 
   # Load images
   IMAGE_FILE_NAME_PREFIX=$(echo "${IMAGE_REPOSITORY}" | tr "/" "-")
-  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-amd64.tar
-  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-arm64.tar
-  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-armv7.tar
+  docker load --input ${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-amd64.tar
+  docker load --input ${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-arm64.tar
+  docker load --input ${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-armv7.tar
 
   TEST_FILE_NAME=$(echo "${TEST_IMAGE_REPOSITORY}" | tr "/" "-")
-  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${TEST_FILE_NAME}.tar
+  docker load --input ${IMAGE_SAVE_LOAD_DIR}/${TEST_FILE_NAME}.tar
 
 	# Push images
 	docker push ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-amd64
