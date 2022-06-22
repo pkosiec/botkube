@@ -2,7 +2,7 @@ IMAGE_REPO=ghcr.io/pkosiec/botkube
 TAG=$(shell cut -d'=' -f2- .release)
 
 .DEFAULT_GOAL := build
-.PHONY: release git-tag check-git-status container-image container-image-e2e-test test test-integration build pre-build publish lint lint-fix system-check save-images load-and-push-images
+.PHONY: release git-tag check-git-status container-image test test-integration build pre-build publish lint lint-fix system-check save-images load-and-push-images
 
 # Show this help.
 help:
@@ -54,13 +54,6 @@ container-image: pre-build
 	@echo "Building docker image"
 	@./hack/goreleaser.sh build
 	@echo "Docker image build successfully"
-
-# Build image for E2E tests
-container-image-e2e-test:
-	$(eval TEST_NAME := "e2e")
-	$(eval IMAGE_SUFFIX := "$(TEST_NAME)-test")
-	$(eval DOCKER_TAG := "latest")
-	DOCKER_BUILDKIT=1 docker build -f ./test.Dockerfile --build-arg TEST_NAME=$(TEST_NAME) -t $(IMAGE_REPO)-$(IMAGE_SUFFIX):$(DOCKER_TAG) .
 
 # Publish release using goreleaser
 gorelease:

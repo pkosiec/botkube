@@ -22,9 +22,9 @@
 set -o errexit
 set -o pipefail
 
-IMAGE_REGISTRY="${DOCKER_IMAGE_REGISTRY:-ghcr.io}"
-IMAGE_REPOSITORY="${DOCKER_IMAGE_REPOSITORY:-pkosiec/botkube}"
-TEST_IMAGE_REPOSITORY="${DOCKER_TEST_IMAGE_REPOSITORY:-pkosiec/botkube-test}"
+IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io}"
+IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-pkosiec/botkube}"
+TEST_IMAGE_REPOSITORY="${TEST_IMAGE_REPOSITORY:-pkosiec/botkube-test}"
 
 prepare() {
   export DOCKER_CLI_EXPERIMENTAL="enabled"
@@ -50,13 +50,13 @@ release_snapshot() {
 save_images() {
   prepare
 
-  if [ -z "${DOCKER_IMAGE_TAG}" ]
+  if [ -z "${IMAGE_TAG}" ]
   then
-    echo "Missing DOCKER_IMAGE_TAG."
+    echo "Missing IMAGE_TAG."
     exit 1
   fi
 
-  export GORELEASER_CURRENT_TAG=${DOCKER_IMAGE_TAG}
+  export GORELEASER_CURRENT_TAG=${IMAGE_TAG}
   goreleaser release --rm-dist --snapshot --skip-publish
 
   mkdir -p /tmp/${IMAGE_REPOSITORY}
@@ -66,35 +66,29 @@ save_images() {
   docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-amd64 > /tmp/${IMAGE_REPOSITORY}-amd64.tar
   docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-arm64 > /tmp/${IMAGE_REPOSITORY}-arm64.tar
   docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-armv7 > /tmp/${IMAGE_REPOSITORY}-armv7.tar
-
-  # Build and save Test image
-  DOCKER_BUILDKIT=1 docker build -t ${IMAGE_REGISTRY}/${TEST_IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG} --build-arg TEST_NAME="e2e" -f ./test.Dockerfile .
   docker save ${IMAGE_REGISTRY}/${TEST_IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG} > /tmp/${TEST_IMAGE_REPOSITORY}.tar
 }
 
 load_and_push_images() {
   prepare
-  if [ -z "${DOCKER_IMAGE_TAG}" ]
+  if [ -z "${IMAGE_TAG}" ]
   then
-    echo "Missing DOCKER_IMAGE_TAG."
+    echo "Missing IMAGE_TAG."
     exit 1
   fi
 
-  export GORELEASER_CURRENT_TAG=${DOCKER_IMAGE_TAG}
+  export GORELEASER_CURRENT_TAG=${IMAGE_TAG}
 
   # Load images
   docker load --input /tmp/${IMAGE_REPOSITORY}-amd64.tar
   docker load --input /tmp/${IMAGE_REPOSITORY}-arm64.tar
   docker load --input /tmp/${IMAGE_REPOSITORY}-armv7.tar
-
-  # tests
   docker load --input /tmp/${TEST_IMAGE_REPOSITORY}.tar
 
 	# Push images
 	docker push ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-amd64
 	docker push ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-arm64
 	docker push ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-armv7
-
 	docker push ${IMAGE_REGISTRY}/${TEST_IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}
 
   # Create manifest

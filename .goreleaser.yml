@@ -2,6 +2,7 @@ project_name: botkube
 env:
   - IMAGE_REGISTRY={{ if index .Env "IMAGE_REGISTRY"  }}{{ .Env.IMAGE_REGISTRY }}{{ else }}ghcr.io{{ end }}
   - IMAGE_REPOSITORY={{ if index .Env "IMAGE_REPOSITORY"  }}{{ .Env.IMAGE_REPOSITORY }}{{ else }}pkosiec/botkube{{ end }}
+  - TEST_IMAGE_REPOSITORY={{ if index .Env "TEST_IMAGE_REPOSITORY"  }}{{ .Env.TEST_IMAGE_REPOSITORY }}{{ else }}pkosiec/botkube-test{{ end }}
 before:
   hooks:
     - go mod download
@@ -53,6 +54,13 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm"
       - "--build-arg=botkube_version={{ .Tag }}"
+  - image_templates:
+      - "{{.Env.IMAGE_REGISTRY}}/{{.Env.TEST_IMAGE_REPOSITORY}}:{{ .Tag }}"
+    use: buildx
+    dockerfile: "build/test.Dockerfile"
+    build_flag_templates:
+      - "--platform=linux/arm"
+      - "--build-arg=TEST_NAME=e2e"
 docker_manifests:
   - name_template: "{{.Env.IMAGE_REGISTRY}}/{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}"
     image_templates:
