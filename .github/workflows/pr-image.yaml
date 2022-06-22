@@ -35,6 +35,7 @@ env:
   IMAGE_REPOSITORY: "pkosiec/pr/botkube"
   TEST_IMAGE_REPOSITORY: "pkosiec/pr/botkube-test"
   IMAGE_TAG: ${{ github.event.pull_request.number }}-PR
+  IMAGE_SAVE_LOAD_DIR: /tmp/botkube-images
 
 jobs:
 
@@ -72,7 +73,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: botkube-${{github.sha}}
-          path: /tmp/${IMAGE_REGISTRY}/*.tar
+          path: ${{ env.IMAGE_SAVE_LOAD_DIR }}
           retention-days: 1
 
 # TODO: Build and push test image
@@ -96,7 +97,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: botkube-${{github.sha}}
-          path: /tmp/${IMAGE_REGISTRY}
+          path: ${{ env.IMAGE_SAVE_LOAD_DIR }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2

@@ -25,6 +25,7 @@ set -o pipefail
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io}"
 IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-pkosiec/botkube}"
 TEST_IMAGE_REPOSITORY="${TEST_IMAGE_REPOSITORY:-pkosiec/botkube-test}"
+IMAGE_SAVE_LOAD_DIR="${IMAGE_SAVE_LOAD_DIR:-/tmp/botkube-images}"
 
 prepare() {
   export DOCKER_CLI_EXPERIMENTAL="enabled"
@@ -59,14 +60,16 @@ save_images() {
   export GORELEASER_CURRENT_TAG=${IMAGE_TAG}
   goreleaser release --rm-dist --snapshot --skip-publish
 
-  mkdir -p /tmp/${IMAGE_REPOSITORY}
-  mkdir -p /tmp/${TEST_IMAGE_REPOSITORY}
+  mkdir -p "${IMAGE_SAVE_LOAD_DIR}"
 
   # Save images
-  docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-amd64 > /tmp/${IMAGE_REPOSITORY}-amd64.tar
-  docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-arm64 > /tmp/${IMAGE_REPOSITORY}-arm64.tar
-  docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-armv7 > /tmp/${IMAGE_REPOSITORY}-armv7.tar
-  docker save ${IMAGE_REGISTRY}/${TEST_IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG} > /tmp/${TEST_IMAGE_REPOSITORY}.tar
+  IMAGE_FILE_NAME_PREFIX=$(echo "${IMAGE_REPOSITORY}" | tr "/" "-")
+  docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-amd64 > ${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-amd64.tar
+  docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-arm64 > ${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-arm64.tar
+  docker save ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-armv7 > ${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-armv7.tar
+
+  TEST_FILE_NAME=$(echo "${TEST_IMAGE_REPOSITORY}" | tr "/" "-")
+  docker save ${IMAGE_REGISTRY}/${TEST_IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG} > ${IMAGE_SAVE_LOAD_DIR}/${TEST_FILE_NAME}.tar
 }
 
 load_and_push_images() {
@@ -80,10 +83,13 @@ load_and_push_images() {
   export GORELEASER_CURRENT_TAG=${IMAGE_TAG}
 
   # Load images
-  docker load --input /tmp/${IMAGE_REPOSITORY}-amd64.tar
-  docker load --input /tmp/${IMAGE_REPOSITORY}-arm64.tar
-  docker load --input /tmp/${IMAGE_REPOSITORY}-armv7.tar
-  docker load --input /tmp/${TEST_IMAGE_REPOSITORY}.tar
+  IMAGE_FILE_NAME_PREFIX=$(echo "${IMAGE_REPOSITORY}" | tr "/" "-")
+  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-amd64.tar
+  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-arm64.tar
+  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${IMAGE_FILE_NAME_PREFIX}-armv7.tar
+
+  TEST_FILE_NAME=$(echo "${TEST_IMAGE_REPOSITORY}" | tr "/" "-")
+  docker load --input /tmp/${IMAGE_SAVE_LOAD_DIR}/${TEST_FILE_NAME}.tar
 
 	# Push images
 	docker push ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${GORELEASER_CURRENT_TAG}-amd64

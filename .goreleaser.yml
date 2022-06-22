@@ -25,8 +25,30 @@ builds:
       - arm64
     goarm:
       - 7
+  - id: botkube-test
+    command: test
+    binary: botkube-e2e.test
+    main: ./tests/e2e/
+    no_main_check: true
+    tags:
+      - integration
+    flags:
+      - -c
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+archives:
+  - id: my-archive
+    builds:
+      - botkube
 snapshot:
   name_template: "{{ .Tag }}"
+release:
+  ids:
+    - botkube
 changelog:
   skip: true
 dockers:
@@ -57,10 +79,12 @@ dockers:
   - image_templates:
       - "{{.Env.IMAGE_REGISTRY}}/{{.Env.TEST_IMAGE_REPOSITORY}}:{{ .Tag }}"
     use: buildx
+    ids:
+      - botkube-test
     dockerfile: "build/test.Dockerfile"
     build_flag_templates:
-      - "--platform=linux/arm"
-      - "--build-arg=TEST_NAME=e2e"
+      - "--platform=linux/amd64"
+      - "--build-arg=TEST_NAME=botkube-e2e.test"
 docker_manifests:
   - name_template: "{{.Env.IMAGE_REGISTRY}}/{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}"
     image_templates:
