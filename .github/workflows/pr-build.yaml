@@ -1,4 +1,4 @@
-name: Publish BotKube image
+name: Pull request Build
 
 on:
   pull_request_target:
@@ -8,7 +8,6 @@ on:
     paths-ignore:
       - 'branding/**'
       - 'design/**'
-      - 'helm/**'
       - '.codespell-whitelist'
       - '.gitignore'
       - '.golangci.yml'
@@ -159,58 +158,22 @@ jobs:
       - name: Create cluster
         run: "k3d cluster create botkube --wait --timeout=5m"
 
-      - name: Prepare BotKube values
+      - name: Install BotKube
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_TESTER_APP_TOKEN: ${{ secrets.SLACK_TESTER_APP_TOKEN }}
+          SLACK_TESTER_APP_TOKEN: ${{ secrets.SLACK_TESTER_APP_TOKEN }}      
         run: |
-          cat > ${RUNNER_TEMP}/values.yaml << ENDOFFILE
-          communications:
-            slack:
-              enabled: false # Tests will override this temporarily
-              token: ${SLACK_BOT_TOKEN} # Provide a valid token for BotKube app
-              channel: "" # Tests will override this temporarily
-          config:
-            resources:
-              - name: v1/configmaps
-                namespaces:
-                  include:
-                    - botkube
-                events:
-                  - create
-                  - update
-                  - delete
-              - name: v1/pods
-                namespaces:
-                  include:
-                    - botkube
-                events:
-                  - create
-            settings:
-              clustername: sample
-              kubectl:
-                enabled: true
-              upgradeNotifier: false
-            enabled: true
-          extraAnnotations:
-            botkube.io/disable: "true"
-          image:
-            registry: ${IMAGE_REGISTRY}
-            repository: ${IMAGE_REPOSITORY}
-            tag: ${IMAGE_TAG}
-          e2eTest:
-            image:
-              registry: ${IMAGE_REGISTRY}
-              repository: ${TEST_IMAGE_REPOSITORY}
-              tag: ${IMAGE_TAG}
-              pullPolicy: Always
-            slack:
-              testerAppToken: "${SLACK_TESTER_APP_TOKEN}"
-              additionalContextMessage: "Pull request: ${PR_NUMBER} - https://github.com/infracloudio/botkube/pull/${PR_NUMBER}"
-          ENDOFFILE
-
-      - name: Install BotKube
-        run: "helm install botkube --namespace botkube ./helm/botkube -f $RUNNER_TEMP/values.yaml --wait --create-namespace"
+          helm install botkube --namespace botkube ./helm/botkube --wait --create-namespace \
+            -f ./helm/botkube/e2e-test-values.yaml \
+            --set communications.slack.token="${SLACK_BOT_TOKEN}" \
+            --set image.registry="${IMAGE_REGISTRY}" \
+            --set image.repository="${IMAGE_REPOSITORY}" \
+            --set image.tag="${IMAGE_TAG}" \
+            --set e2eTest.image.registry="${IMAGE_REGISTRY}" \
+            --set e2eTest.image.repository="${TEST_IMAGE_REPOSITORY}" \
+            --set e2eTest.image.tag="${IMAGE_TAG}" \
+            --set e2eTest.slack.testerAppToken="${SLACK_TESTER_APP_TOKEN}" \
+            --set e2eTest.slack.additionalContextMessage="Pull request: ${PR_NUMBER} - https://github.com/infracloudio/botkube/pull/${PR_NUMBER}"
 
       - name: Run tests
         run: "helm test botkube --namespace botkube --timeout=$INTEGRATION_TESTS_TIMEOUT --logs"

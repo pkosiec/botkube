@@ -39,55 +39,42 @@ This directory contains E2E tests which are run against BotKube installed on Kub
 5. Navigate to the **OAuth & Permissions** section
 6. Copy the **Bot User OAuth Token** and save it for later.
 
-## Run tests locally
+## Install BotKube
 
-To run the tests manually against the latest development version, follow these steps:
+1. Export required environment variables:
+
+    ```bash
+    export SLACK_BOT_TOKEN="{token for your configured BotKube app}" # WARNING: It is token for BotKube Slack bot, not the Tester!
+    export IMAGE_REGISTRY="docker.io"
+    export IMAGE_REPOSITORY="pkosiec/botkube" # TODO: Replace with image built on `develop`
+    export IMAGE_TAG="e2e-tests"
+
+    #
+    # The following environmental variables are required only when running integration tests via Helm:
+    #
+    export SLACK_TESTER_APP_TOKEN="{BotKube tester app token}" # WARNING: This is a token for Tester, not the BotKube Slack bot!
+    export TEST_IMAGE_REPOSITORY="pkosiec/botkube-test" # TODO: Replace with image built on `develop`
+    export TEST_IMAGE_TAG="latest"
+    ```
 
 1. Install BotKube using Helm chart:
         
     ```bash
-    export SLACK_BOT_TOKEN="{token for your configured BotKube app}" # WARNING: It is token for BotKube Slack bot, not the Tester!
-    cat > /tmp/values.yaml << ENDOFFILE
-    communications:
-      slack:
-        enabled: false # Tests will override this temporarily
-        token: ${SLACK_BOT_TOKEN} # Provide a valid token for BotKube app
-        channel: botkube-test # Tests will override this temporarily
-    config:
-      resources:
-        - name: v1/configmaps
-          namespaces:
-            include:
-              - botkube
-          events:
-            - create
-            - update
-            - delete
-        - name: v1/pods
-          namespaces:
-            include:
-              - botkube
-          events:
-            - create
-      settings: 
-        clustername: sample
-        kubectl:
-          enabled: true
-        upgradeNotifier: false
-      enabled: true
-    extraAnnotations:
-      botkube.io/disable: "true"
-    image:
-      registry: docker.io
-      repository: pkosiec/botkube 
-      tag: e2e-tests
-    ENDOFFILE
-    
-    helm install botkube --namespace botkube ./helm/botkube -f /tmp/values.yaml --wait
+    helm install botkube --namespace botkube ./helm/botkube --wait --create-namespace \
+      -f ./helm/botkube/e2e-test-values.yaml \
+      --set communications.slack.token="${SLACK_BOT_TOKEN}" \
+      --set image.registry="${IMAGE_REGISTRY}" \
+      --set image.repository="${IMAGE_REPOSITORY}" \
+      --set image.tag="${IMAGE_TAG}" \
+      --set e2eTest.image.registry="${IMAGE_REGISTRY}" \
+      --set e2eTest.image.repository="${TEST_IMAGE_REPOSITORY}" \
+      --set e2eTest.image.tag="${TEST_IMAGE_TAG}" \
+      --set e2eTest.slack.testerAppToken="${SLACK_TESTER_APP_TOKEN}"
     ```
 
+## Run tests locally
 
-1. Export required environment variables
+1. Export required environment variables:
 
     ```bash
     export SLACK_TESTER_APP_TOKEN="{BotKube tester app token}" # WARNING: This is a token for Tester, not the BotKube Slack bot!
@@ -102,54 +89,7 @@ To run the tests manually against the latest development version, follow these s
 
 ## Run Helm test
 
-To run the tests manually against the latest development version, follow these steps:
-
-1. Install BotKube using Helm chart:
-
-    ```bash
-    export SLACK_BOT_TOKEN="{token for your configured BotKube app}" # WARNING: It is token for BotKube Slack bot, not the Tester!
-    export SLACK_TESTER_APP_TOKEN="{BotKube tester app token}" # WARNING: This is a token for Tester, not the BotKube Slack bot!
-    cat > /tmp/values.yaml << ENDOFFILE
-    communications:
-      slack:
-        enabled: false # Tests will override this temporarily
-        token: ${SLACK_BOT_TOKEN} # Provide a valid token for BotKube app
-        channel: "" # Tests will override this temporarily
-    config:
-      resources:
-        - name: v1/configmaps
-          namespaces:
-            include:
-              - botkube
-          events:
-            - create
-            - update
-            - delete
-        - name: v1/pods
-          namespaces:
-            include:
-              - botkube
-          events:
-            - create
-      settings:
-        clustername: sample
-        kubectl:
-          enabled: true
-        upgradeNotifier: false
-      enabled: true
-    extraAnnotations:
-      botkube.io/disable: "true"
-    image:
-      registry: docker.io
-      repository: pkosiec/botkube 
-      tag: e2e-tests
-    e2eTest:
-      slack:
-        testerAppToken: "${SLACK_TESTER_APP_TOKEN}" 
-    ENDOFFILE
-    
-    helm install botkube --namespace botkube ./helm/botkube -f /tmp/values.yaml --wait
-    ```
+Follow these steps to run integration tests via Helm:
 
 1. Run the tests:
 
@@ -159,7 +99,7 @@ To run the tests manually against the latest development version, follow these s
 
 1. Wait for the results. The logs will be printed when the `helm test` command exits.
 
-    If you want to see the logs in the real time, run:
+    If you would like to see the logs in the real time, run:
 
     ```bash
     kubectl logs -n botkube botkube-e2e-test -f
