@@ -1,0 +1,49 @@
+{{- $cfgMapName := printf "%s-%s" (include "botkube.fullname" .) "state-config" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $cfgMapName }}
+  labels:
+    app.kubernetes.io/name: {{ include "botkube.name" . }}
+    helm.sh/chart: {{ include "botkube.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+{{/*  {{- $previous := lookup "v1" "ConfigMap" .Release.Namespace $cfgMapName }}*/}}
+{{/*  {{- if $previous }}*/}}
+{{/*  startup.yaml: |*/}}
+{{/*    {{- $prev := index $previous.data "startup.yaml" -}}*/}}
+{{/*    {{- $prevYaml := $prev | fromYaml -}}*/}}
+{{/*    {{- $merged := mustMergeOverwrite (mustDeepCopy (default (dict) $prevYaml.filters )) (mustDeepCopy .Values.filters) }}*/}}
+{{/*        filters:*/}}
+{{/*      {{ $merged | toYaml | indent 8 -}}*/}}
+{{/*  {{- else }}*/}}
+  state.yaml: |
+    # TODO: Change
+  startup.yaml: |
+    communications:
+        {{ range $commGroupName,$commGroup := .Values.communications }}
+
+                {{ range $commPlatformName,$commPlatform := $commGroup }}
+                  {{$commPlatformName}}:
+                  {{ if $commPlatform.channels }}
+                     {{ range $channelAlias,$channelCfg := $commPlatform.channels }}
+                          {{$channelAlias}}:
+                              notification:
+                                {{ if $channelCfg.notification }}
+                                disabled: {{$channelCfg.notification.disabled | default false }}
+                                {{end}}
+                     {{ end }}
+                  {{ end }}
+                  {{ if $commPlatformName eq "teams"}}
+                     notification:
+                        {{ if $commPlatform.notification }}
+                        disabled: {{$commPlatform.notification.disabled | default false }}
+                        {{end}}
+                  {{ end }}
+                {{ end }}
+        {{ end }}
+
+    filters:
+      {{- .Values.filters | toYaml | nindent 6 }}
+{{/*  {{ end }}*/}}

@@ -56,6 +56,7 @@ type Slack struct {
 	channels        map[string]channelConfigByName
 	notifyMutex     sync.Mutex
 	botMentionRegex *regexp.Regexp
+	commGroupName   string
 	renderer        *SlackRenderer
 }
 
@@ -66,7 +67,7 @@ type slackMessage struct {
 }
 
 // NewSlack creates a new Slack instance.
-func NewSlack(log logrus.FieldLogger, cfg config.Slack, executorFactory ExecutorFactory, reporter FatalErrorAnalyticsReporter) (*Slack, error) {
+func NewSlack(log logrus.FieldLogger, commGroupName string, cfg config.Slack, executorFactory ExecutorFactory, reporter FatalErrorAnalyticsReporter) (*Slack, error) {
 	client := slack.New(cfg.Token, slack.OptionAppLevelToken(SlackAppLevelToken))
 
 	authResp, err := client.AuthTest()
@@ -92,6 +93,7 @@ func NewSlack(log logrus.FieldLogger, cfg config.Slack, executorFactory Executor
 		botID:           botID,
 		client:          client,
 		channels:        channels,
+		commGroupName:   commGroupName,
 		renderer:        NewSlackRenderer(cfg.Notification),
 		botMentionRegex: botMentionRegex,
 	}, nil
@@ -253,7 +255,7 @@ func (b *Slack) handleMessage(event slackMessage) error {
 
 	channel, isAuthChannel := b.getChannels()[info.Name]
 
-	e := b.executorFactory.NewDefault(b.IntegrationName(), b, isAuthChannel, info.Name, channel.Bindings.Executors, request)
+	e := b.executorFactory.NewDefault(b.commGroupName, b.IntegrationName(), b, isAuthChannel, info.Name, channel.Bindings.Executors, request)
 	response := e.Execute()
 	err = b.send(event, request, response)
 	if err != nil {

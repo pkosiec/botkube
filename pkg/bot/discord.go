@@ -54,6 +54,7 @@ type Discord struct {
 	channels        map[string]channelConfigByID
 	notifyMutex     sync.Mutex
 	botMentionRegex *regexp.Regexp
+	commGroupName   string
 }
 
 // discordMessage contains message details to execute command and send back the result.
@@ -69,7 +70,7 @@ type discordMessage struct {
 }
 
 // NewDiscord creates a new Discord instance.
-func NewDiscord(log logrus.FieldLogger, cfg config.Discord, executorFactory ExecutorFactory, reporter AnalyticsReporter) (*Discord, error) {
+func NewDiscord(log logrus.FieldLogger, commGroupName string, cfg config.Discord, executorFactory ExecutorFactory, reporter AnalyticsReporter) (*Discord, error) {
 	botMentionRegex, err := discordBotMentionRegex(cfg.BotID)
 	if err != nil {
 		return nil, err
@@ -89,6 +90,7 @@ func NewDiscord(log logrus.FieldLogger, cfg config.Discord, executorFactory Exec
 		api:             api,
 		botID:           cfg.BotID,
 		notification:    cfg.Notification,
+		commGroupName:   commGroupName,
 		channels:        channelsCfg,
 		botMentionRegex: botMentionRegex,
 	}, nil
@@ -239,7 +241,7 @@ func (dm *discordMessage) HandleMessage(b *Discord) {
 	channel, exists := b.getChannels()[dm.Event.ChannelID]
 	dm.IsAuthChannel = exists
 
-	e := dm.executorFactory.NewDefault(b.IntegrationName(), b, dm.IsAuthChannel, channel.Identifier(), channel.Bindings.Executors, dm.Request)
+	e := dm.executorFactory.NewDefault(b.commGroupName, b.IntegrationName(), b, dm.IsAuthChannel, channel.Identifier(), channel.Bindings.Executors, dm.Request)
 
 	dm.Response = e.Execute()
 	dm.Send()

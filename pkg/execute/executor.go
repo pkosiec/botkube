@@ -79,6 +79,8 @@ type DefaultExecutor struct {
 	conversationID    string
 	kubectlExecutor   *Kubectl
 	merger            *kubectl.Merger
+	cfgManager        ConfigPersistenceManager
+	commGroupName     string
 }
 
 // NotifierAction creates custom type for notifier actions
@@ -178,7 +180,7 @@ func (e *DefaultExecutor) Execute() string {
 		return out
 	}
 	if e.notifierExecutor.CanHandle(args) {
-		res, err := e.notifierExecutor.Do(args, e.platform, e.conversationID, clusterName, e.notifierHandler)
+		res, err := e.notifierExecutor.Do(args, e.commGroupName, e.platform, e.conversationID, clusterName, e.notifierHandler)
 		if err != nil {
 			if errors.Is(err, errInvalidNotifierCommand) {
 				return incompleteCmdMsg
