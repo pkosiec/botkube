@@ -27,26 +27,27 @@ func ResourceEventsForConfig(recCfg config.Recommendations) map[string]config.Ev
 }
 
 // ShouldIgnoreEvent returns true if user doesn't listen to events for a given resource, apart from enabled recommendations.
-func ShouldIgnoreEvent(recCfg config.Recommendations, sources map[string]config.Sources, sourceBindings []string, event events.Event) bool {
+func ShouldIgnoreEvent(recCfg config.Recommendations, sources map[string]config.Sources, sourceBindings []string, event events.Event) []string {
 	if event.HasRecommendationsOrWarnings() {
 		// shouldn't be skipped
-		return false
+		return sourceBindings
 	}
 
 	res := ResourceEventsForConfig(recCfg)
 	recommEventType, ok := res[event.Resource]
 	if !ok {
 		// this event doesn't relate to recommendations, finish early
-		return false
+		return sourceBindings
 	}
 
 	if event.Type != recommEventType {
 		// this event doesn't relate to recommendations, finish early
-		return false
+		return sourceBindings
 	}
 
 	// Resource + event type matches the ones configured from recommendation.
 	// Check if user listens to this event.
+	var sourceBindingsToNotify []string
 	for _, key := range sourceBindings {
 		source, exists := sources[key]
 		if !exists {
@@ -55,10 +56,10 @@ func ShouldIgnoreEvent(recCfg config.Recommendations, sources map[string]config.
 
 		// sources are appended, so we need to check the first source that has a given resource with event
 		if source.Kubernetes.Resources.IsAllowed(event.Resource, event.Namespace, event.Type) {
-			return false
+			sourceBindingsToNotify = append(sourceBindingsToNotify, key)
 		}
 	}
 
 	// The event is related to recommendations informers. No recommendations there, so it should be skipped.
-	return true
+	return []string{}
 }

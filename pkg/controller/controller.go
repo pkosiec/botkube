@@ -278,7 +278,8 @@ func (c *Controller) sendEvent(ctx context.Context, obj interface{}, resource st
 		c.log.Errorf("while running recommendations: %w", err)
 	}
 
-	if recommendation.ShouldIgnoreEvent(recCfg, c.conf.Sources, sources, event) {
+	sourceBindingsToNotify := recommendation.ShouldIgnoreEvent(recCfg, c.conf.Sources, sources, event)
+	if len(sourceBindingsToNotify) == 0 {
 		c.log.Debugf("Skipping event as it is related to recommendation informers and doesn't have any recommendations: %#v", event)
 		return
 	}
@@ -289,7 +290,7 @@ func (c *Controller) sendEvent(ctx context.Context, obj interface{}, resource st
 		go func(n Notifier) {
 			defer analytics.ReportPanicIfOccurs(c.log, c.reporter)
 
-			err := n.SendEvent(ctx, event, sources)
+			err := n.SendEvent(ctx, event, sourceBindingsToNotify)
 			if err != nil {
 				reportErr := c.reporter.ReportHandledEventError(n.Type(), n.IntegrationName(), anonymousEvent, err)
 				if reportErr != nil {
