@@ -278,7 +278,7 @@ func (c *Controller) sendEvent(ctx context.Context, obj interface{}, resource st
 		c.log.Errorf("while running recommendations: %w", err)
 	}
 
-	sourceBindingsToNotify := recommendation.ShouldIgnoreEvent(recCfg, c.conf.Sources, sources, event)
+	sourceBindingsToNotify := recommendation.FilterSourcesForEvent(recCfg, c.conf.Sources, sources, event)
 	if len(sourceBindingsToNotify) == 0 {
 		c.log.Debugf("Skipping event as it is related to recommendation informers and doesn't have any recommendations: %#v", event)
 		return

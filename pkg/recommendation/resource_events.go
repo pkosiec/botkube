@@ -26,8 +26,9 @@ func ResourceEventsForConfig(recCfg config.Recommendations) map[string]config.Ev
 	return resNames
 }
 
-// ShouldIgnoreEvent returns true if user doesn't listen to events for a given resource, apart from enabled recommendations.
-func ShouldIgnoreEvent(recCfg config.Recommendations, sources map[string]config.Sources, sourceBindings []string, event events.Event) []string {
+// FilterSourcesForEvent checks if user doesn't listen to events for a given resource, apart from enabled recommendations and filters
+// the source bindings.
+func FilterSourcesForEvent(recCfg config.Recommendations, sources map[string]config.Sources, sourceBindings []string, event events.Event) []string {
 	if event.HasRecommendationsOrWarnings() {
 		// shouldn't be skipped
 		return sourceBindings

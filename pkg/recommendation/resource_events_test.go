@@ -90,7 +90,7 @@ func TestResourceEventsForConfig(t *testing.T) {
 	}
 }
 
-func TestShouldIgnoreEvent(t *testing.T) {
+func TestFilterSourcesForEvent(t *testing.T) {
 	// given
 	sources := fixSources()
 	testCases := []struct {
@@ -181,7 +181,7 @@ func TestShouldIgnoreEvent(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {
 			// when
-			actual := recommendation.ShouldIgnoreEvent(testCase.InputConfig, sources, testCase.InputSourceBindings, testCase.InputEvent)
+			actual := recommendation.FilterSourcesForEvent(testCase.InputConfig, sources, testCase.InputSourceBindings, testCase.InputEvent)
 
 			// then
 			assert.Equal(t, testCase.Expected, actual)
