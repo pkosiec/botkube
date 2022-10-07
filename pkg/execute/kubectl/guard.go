@@ -23,7 +23,7 @@ func NewCommandGuard(log logrus.FieldLogger, discoveryCli discovery.DiscoveryInt
 }
 
 func (g *CommandGuard) GetAllowedResourcesForVerb(selectedVerb string, allConfiguredResources []string) ([]Resource, error) {
-	//resList, err := g.discoveryCli.ServerPreferredResources()
+	resList, err := g.discoveryCli.ServerPreferredResources()
 
 	return nil, nil
 }
@@ -31,7 +31,3 @@ func (g *CommandGuard) GetAllowedResourcesForVerb(selectedVerb string, allConfig
 func (g *CommandGuard) GetResourceDetails(selectedVerb, resourceType string) (Resource, error) {
 	return Resource{}, nil
 }
-
-//func (g *CommandGuard) GetCommandsForResource(resourceType string, allConfiguredVerbs []string) ([], error) {
-//	return nil, nil
-//}
