@@ -71,6 +71,17 @@ type Section struct {
 	Buttons     Buttons
 	MultiSelect MultiSelect
 	Selects     Selects
+	Context     ContextItems
+}
+
+type ContextItems []ContextItem
+
+func (c ContextItems) IsDefined() bool {
+	return len(c) > 0
+}
+
+type ContextItem struct {
+	Text string
 }
 
 // Selects holds multiple Select objects.

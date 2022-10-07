@@ -381,32 +381,25 @@ type Command struct {
 func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSources []string) error {
 	b.log.Debugf("Sending to Slack: %+v", event)
 
-	cmdSection := interactive.Message{
-		Sections: []interactive.Section{
-			{
-				Base: interactive.Base{
-					Header: "Foo",
-				},
-			},
-			interactive.Section{
-				Selects: interactive.Selects{
-					ID: "09dc531e-8ed2-45a9-9f97-15428d47bf69", // FIXME: Change this
-					Items: []interactive.Select{
-						{
-							Name:    "Command",
-							Command: "kubectl get pods",
-							OptionGroups: []interactive.OptionGroup{
-								{
-									Name: "Hello",
-									Options: []interactive.OptionItem{
-										{
-											Name:  "first",
-											Value: "first",
-										},
-										{
-											Name:  "second",
-											Value: "second",
-										},
+	additionalSections := []interactive.Section{
+		{
+			Selects: interactive.Selects{
+				ID: "09dc531e-8ed2-45a9-9f97-15428d47bf69", // FIXME: Change this
+				Items: []interactive.Select{
+					{
+						Name:    "Command",
+						Command: "kubectl get pods",
+						OptionGroups: []interactive.OptionGroup{
+							{
+								Name: "Hello",
+								Options: []interactive.OptionItem{
+									{
+										Name:  "first",
+										Value: "first",
+									},
+									{
+										Name:  "second",
+										Value: "second",
 									},
 								},
 							},
@@ -417,7 +410,7 @@ func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSo
 		},
 	}
 
-	attachment := b.renderer.RenderEventInteractiveMessage(event, cmdSection)
+	attachment := b.renderer.RenderEventInteractiveMessage(event, additionalSections)
 
 	options := []slack.MsgOption{
 		slack.MsgOptionAttachments(attachment),

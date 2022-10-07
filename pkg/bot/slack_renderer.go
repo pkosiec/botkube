@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/slack-go/slack"
 
@@ -52,21 +53,38 @@ func (b *SlackRenderer) RenderEventMessage(event events.Event) slack.Attachment 
 }
 
 // RenderEventInteractiveMessage returns Slack interactive message based on a given event.
-func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalMsg interactive.Message) slack.Attachment {
-	var attachment slack.Attachment
+func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalSections []interactive.Section) slack.Attachment {
 
-	//switch b.notification.Type {
-	//case config.LongNotification:
-	//	attachment = b.longNotification(event)
-	//case config.ShortNotification:
-	//	fallthrough
-	//default:
-	//	attachment = b.shortNotification(event)
-	//}
+	var sections []interactive.Section
 
-	// only selectbox are supported
-	if additionalMsg.HasSections() {
-		attachment.Blocks.BlockSet = b.RenderAsSlackBlocks(additionalMsg)
+	switch b.notification.Type {
+	case config.LongNotification:
+		//sections = append(sections, b.longNotificationBlocks(event))
+		fallthrough // FIXME: Remove
+	case config.ShortNotification:
+		fallthrough
+	default:
+		sections = append(sections, b.shortNotificationSection(event))
+	}
+
+	if !event.TimeStamp.IsZero() {
+		fallbackTimestampText := event.TimeStamp.Format(time.RFC1123)
+		timestampText := fmt.Sprintf("<!date^%d^{date_num} {time_secs}|%s>", event.TimeStamp.Unix(), fallbackTimestampText)
+		sections = append(sections, interactive.Section{
+			Context: []interactive.ContextItem{{
+				Text: timestampText,
+			}}})
+	}
+
+	if len(additionalSections) > 0 {
+		sections = append(sections, additionalSections...)
+	}
+
+	attachment := slack.Attachment{
+		Color: attachmentColor[event.Level],
+		Blocks: slack.Blocks{
+			BlockSet: b.RenderAsSlackBlocks(interactive.Message{Sections: sections}),
+		},
 	}
 
 	return attachment
@@ -206,7 +224,29 @@ func (b *SlackRenderer) renderSection(in interactive.Section) []slack.Block {
 		out = append(out, b.renderSelects(in.Selects))
 	}
 
+	if len(in.Context) > 0 {
+		out = append(out, b.renderContext(in.Context)...)
+	}
+
 	return out
+}
+
+func (b *SlackRenderer) renderContext(in []interactive.ContextItem) []slack.Block {
+	var blocks []slack.Block
+
+	for _, item := range in {
+		if item.Text == "" {
+			// Skip empty sections
+			continue
+		}
+
+		blocks = append(blocks, slack.NewContextBlock(
+			"",
+			slack.NewTextBlockObject(slack.MarkdownType, item.Text, false, false),
+		))
+	}
+
+	return blocks
 }
 
 // renderButtons renders button section.
@@ -350,6 +390,15 @@ func (b *SlackRenderer) appendIfNotEmpty(fields []slack.AttachmentField, in stri
 		Value: in,
 		Short: short,
 	})
+}
+
+func (b *SlackRenderer) shortNotificationSection(event events.Event) interactive.Section {
+	return interactive.Section{
+		Base: interactive.Base{
+			Header:      event.Title,
+			Description: formatx.ShortMessage(event),
+		},
+	}
 }
 
 func (b *SlackRenderer) shortNotification(event events.Event) slack.Attachment {
