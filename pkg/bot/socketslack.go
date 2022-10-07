@@ -410,10 +410,10 @@ func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSo
 		},
 	}
 
-	attachment := b.renderer.RenderEventInteractiveMessage(event, additionalSections)
+	msg := b.renderer.RenderEventInteractiveMessage(event, additionalSections)
 
 	options := []slack.MsgOption{
-		slack.MsgOptionAttachments(attachment),
+		b.renderer.RenderInteractiveMessage(msg),
 	}
 
 	errs := multierror.New()

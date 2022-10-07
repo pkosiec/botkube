@@ -53,7 +53,7 @@ func (b *SlackRenderer) RenderEventMessage(event events.Event) slack.Attachment 
 }
 
 // RenderEventInteractiveMessage returns Slack interactive message based on a given event.
-func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalSections []interactive.Section) slack.Attachment {
+func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalSections []interactive.Section) interactive.Message {
 
 	var sections []interactive.Section
 
@@ -67,27 +67,11 @@ func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additi
 		sections = append(sections, b.shortNotificationSection(event))
 	}
 
-	if !event.TimeStamp.IsZero() {
-		fallbackTimestampText := event.TimeStamp.Format(time.RFC1123)
-		timestampText := fmt.Sprintf("<!date^%d^{date_num} {time_secs}|%s>", event.TimeStamp.Unix(), fallbackTimestampText)
-		sections = append(sections, interactive.Section{
-			Context: []interactive.ContextItem{{
-				Text: timestampText,
-			}}})
-	}
-
 	if len(additionalSections) > 0 {
 		sections = append(sections, additionalSections...)
 	}
 
-	attachment := slack.Attachment{
-		Color: attachmentColor[event.Level],
-		Blocks: slack.Blocks{
-			BlockSet: b.RenderAsSlackBlocks(interactive.Message{Sections: sections}),
-		},
-	}
-
-	return attachment
+	return interactive.Message{Sections: sections}
 }
 
 // RenderModal returns a modal request view based on a given message.
@@ -393,12 +377,24 @@ func (b *SlackRenderer) appendIfNotEmpty(fields []slack.AttachmentField, in stri
 }
 
 func (b *SlackRenderer) shortNotificationSection(event events.Event) interactive.Section {
-	return interactive.Section{
+	emoji := emojiForLevel[event.Level]
+	section := interactive.Section{
 		Base: interactive.Base{
-			Header:      event.Title,
+			Header:      fmt.Sprintf("%s %s", emoji, event.Title),
 			Description: formatx.ShortMessage(event),
 		},
 	}
+
+	if !event.TimeStamp.IsZero() {
+		fallbackTimestampText := event.TimeStamp.Format(time.RFC1123)
+		timestampText := fmt.Sprintf("<!date^%d^{date_num} {time_secs}|%s>", event.TimeStamp.Unix(), fallbackTimestampText)
+		section.Context = []interactive.ContextItem{{
+			Text: timestampText,
+		}}
+	}
+
+	return section
+
 }
 
 func (b *SlackRenderer) shortNotification(event events.Event) slack.Attachment {
