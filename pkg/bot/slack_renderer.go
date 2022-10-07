@@ -51,6 +51,27 @@ func (b *SlackRenderer) RenderEventMessage(event events.Event) slack.Attachment 
 	return attachment
 }
 
+// RenderEventInteractiveMessage returns Slack interactive message based on a given event.
+func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalMsg interactive.Message) slack.Attachment {
+	var attachment slack.Attachment
+
+	//switch b.notification.Type {
+	//case config.LongNotification:
+	//	attachment = b.longNotification(event)
+	//case config.ShortNotification:
+	//	fallthrough
+	//default:
+	//	attachment = b.shortNotification(event)
+	//}
+
+	// only selectbox are supported
+	if additionalMsg.HasSections() {
+		attachment.Blocks.BlockSet = b.RenderAsSlackBlocks(additionalMsg)
+	}
+
+	return attachment
+}
+
 // RenderModal returns a modal request view based on a given message.
 func (b *SlackRenderer) RenderModal(msg interactive.Message) slack.ModalViewRequest {
 	title := msg.Header

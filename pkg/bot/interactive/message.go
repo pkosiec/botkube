@@ -38,6 +38,10 @@ func (msg *Message) HasSections() bool {
 	return len(msg.Sections) != 0
 }
 
+type Actions struct {
+	Selects Selects
+}
+
 // Select holds data related to the select drop-down.
 type Select struct {
 	Name    string

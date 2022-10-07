@@ -371,14 +371,61 @@ func (b *SocketSlack) send(event socketSlackMessage, req string, resp interactiv
 	return nil
 }
 
+// TODO: Move it
+type Command struct {
+	DisplayName string
+	Cmd         string
+}
+
 // SendEvent sends event notification to slack
 func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSources []string) error {
 	b.log.Debugf("Sending to Slack: %+v", event)
-	attachment := b.renderer.RenderEventMessage(event)
+
+	cmdSection := interactive.Message{
+		Sections: []interactive.Section{
+			{
+				Base: interactive.Base{
+					Header: "Foo",
+				},
+			},
+			interactive.Section{
+				Selects: interactive.Selects{
+					ID: "09dc531e-8ed2-45a9-9f97-15428d47bf69", // FIXME: Change this
+					Items: []interactive.Select{
+						{
+							Name:    "Command",
+							Command: "kubectl get pods",
+							OptionGroups: []interactive.OptionGroup{
+								{
+									Name: "Hello",
+									Options: []interactive.OptionItem{
+										{
+											Name:  "first",
+											Value: "first",
+										},
+										{
+											Name:  "second",
+											Value: "second",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	attachment := b.renderer.RenderEventInteractiveMessage(event, cmdSection)
+
+	options := []slack.MsgOption{
+		slack.MsgOptionAttachments(attachment),
+	}
 
 	errs := multierror.New()
 	for _, channelName := range b.getChannelsToNotify(event, eventSources) {
-		channelID, timestamp, err := b.client.PostMessageContext(ctx, channelName, slack.MsgOptionAttachments(attachment), slack.MsgOptionAsUser(true))
+		channelID, timestamp, err := b.client.PostMessageContext(ctx, channelName, options...)
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("while posting message to channel %q: %w", channelName, err))
 			continue
