@@ -160,6 +160,9 @@ func run() error {
 
 	router := sources.NewRouter(mapper, dynamicCli, logger.WithField(componentLogFieldKey, "Router"))
 
+	cmdGuard := kubectl.NewCommandGuard(logger.WithField(componentLogFieldKey, "Command Guard"), discoveryCli)
+	commander := kubectl.NewCommander(kcMerger, cmdGuard)
+
 	commCfg := conf.Communications
 	var (
 		notifiers []notifier.Notifier
@@ -194,7 +197,7 @@ func run() error {
 		}
 
 		if commGroupCfg.SocketSlack.Enabled {
-			sb, err := bot.NewSocketSlack(commGroupLogger.WithField(botLogFieldKey, "SocketSlack"), commGroupName, commGroupCfg.SocketSlack, executorFactory, reporter)
+			sb, err := bot.NewSocketSlack(commGroupLogger.WithField(botLogFieldKey, "SocketSlack"), commGroupName, commGroupCfg.SocketSlack, executorFactory, commander, reporter)
 			if err != nil {
 				return reportFatalError("while creating SocketSlack bot", err)
 			}

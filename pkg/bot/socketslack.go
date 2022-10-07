@@ -384,28 +384,13 @@ func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSo
 
 	errs := multierror.New()
 	for _, channelName := range b.getChannelsToNotify(event, eventSources) {
-		channel, isAuthChannel := b.getChannels()[channelName]
+		additionalSection := b.getInteractiveEventSectionIfShould(event, channelName)
 
-		var additionalSection interactive.Section
-		if isAuthChannel {
-			commands, err := b.eventCmdProvider.GetCommandsForEvent(event, channel.Bindings.Executors)
-			if err != nil {
-				b.log.Errorf("while getting commands for event: %w", err)
-				// non-critical error, continue
-			}
-
-			cmdPrefix := fmt.Sprintf("%s kubectl", b.BotName())
-			var optionItems []interactive.OptionItem
-			for _, cmd := range commands {
-				optionItems = append(optionItems, interactive.OptionItem{
-					Name:  cmd.Name,
-					Value: cmd.Cmd,
-				})
-			}
-			additionalSection = interactive.EventCommandsSection(cmdPrefix, optionItems)
+		var additionalSections []interactive.Section
+		if additionalSection != nil {
+			additionalSections = append(additionalSections, *additionalSection)
 		}
-
-		msg := b.renderer.RenderEventInteractiveMessage(event, additionalSection)
+		msg := b.renderer.RenderEventInteractiveMessage(event, additionalSections...)
 
 		options := []slack.MsgOption{
 			b.renderer.RenderInteractiveMessage(msg),
@@ -421,6 +406,34 @@ func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSo
 	}
 
 	return errs.ErrorOrNil()
+}
+
+func (b *SocketSlack) getInteractiveEventSectionIfShould(event events.Event, channelName string) *interactive.Section {
+	channel, isAuthChannel := b.getChannels()[channelName]
+	if !isAuthChannel {
+		return nil
+	}
+
+	commands, err := b.eventCmdProvider.GetCommandsForEvent(event, channel.Bindings.Executors)
+	if err != nil {
+		b.log.Errorf("while getting commands for event: %w", err)
+		return nil
+	}
+
+	if len(commands) == 0 {
+		return nil
+	}
+
+	cmdPrefix := fmt.Sprintf("%s kubectl", b.BotName())
+	var optionItems []interactive.OptionItem
+	for _, cmd := range commands {
+		optionItems = append(optionItems, interactive.OptionItem{
+			Name:  cmd.Name,
+			Value: cmd.Cmd,
+		})
+	}
+	section := interactive.EventCommandsSection(cmdPrefix, optionItems)
+	return &section
 }
 
 func (b *SocketSlack) getChannelsToNotify(event events.Event, eventSources []string) []string {

@@ -3,11 +3,16 @@ package kubectl
 import (
 	"fmt"
 	"github.com/kubeshop/botkube/pkg/events"
+	"strings"
 )
 
 type Commander struct {
-	merger Merger
-	guard  CommandGuard
+	merger *Merger
+	guard  *CommandGuard
+}
+
+func NewCommander(merger *Merger, guard *CommandGuard) *Commander {
+	return &Commander{merger: merger, guard: guard}
 }
 
 type Command struct {
@@ -18,7 +23,10 @@ type Command struct {
 func (c *Commander) GetCommandsForEvent(event events.Event, executorBindings []string) ([]Command, error) {
 	enabledKubectls := c.merger.MergeForNamespace(executorBindings, event.Namespace)
 
-	if _, exists := enabledKubectls.AllowedKubectlResource[event.Resource]; !exists {
+	resourceTypeParts := strings.Split(event.Resource, "/")
+	resourceName := resourceTypeParts[len(resourceTypeParts)-1]
+
+	if _, exists := enabledKubectls.AllowedKubectlResource[resourceName]; !exists {
 		// resource not allowed
 		return nil, nil
 	}
@@ -27,31 +35,29 @@ func (c *Commander) GetCommandsForEvent(event events.Event, executorBindings []s
 
 	var commands []Command
 	for verb := range allowedVerbs {
-		res, err := c.guard.GetResourceDetails(verb, event.Resource)
+		res, err := c.guard.GetResourceDetails(verb, resourceName)
 		if err != nil {
 			// TODO:
 			continue
 		}
 
-		var resource string
+		var resourceSubstr string
 		if res.SlashSeparatedInCommand {
-			resource = fmt.Sprintf("%s/%s", event.Resource, event.Name)
+			resourceSubstr = fmt.Sprintf("%s/%s", resourceName, event.Name)
 		} else {
-			resource = fmt.Sprintf("%s %s", event.Resource, event.Name)
+			resourceSubstr = fmt.Sprintf("%s %s", resourceName, event.Name)
 		}
 
-		var namespace string
+		var namespaceSubstr string
 		if res.Namespaced {
-			namespace = event.Namespace
+			namespaceSubstr = fmt.Sprintf(" --namespace %s", event.Namespace)
 		}
 
 		commands = append(commands, Command{
 			Name: verb,
-			Cmd:  fmt.Sprintf("%s", verb, resource, namespace),
+			Cmd:  fmt.Sprintf("%s %s%s", verb, resourceSubstr, namespaceSubstr),
 		})
 	}
 
-	// TODO: Filter verbs using CommandGuard
-
-	return nil, nil
+	return commands, nil
 }

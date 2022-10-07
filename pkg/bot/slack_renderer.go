@@ -394,7 +394,6 @@ func (b *SlackRenderer) shortNotificationSection(event events.Event) interactive
 	}
 
 	return section
-
 }
 
 func (b *SlackRenderer) shortNotification(event events.Event) slack.Attachment {
