@@ -38,17 +38,17 @@ func NewSlackRenderer(notificationType config.Notification) *SlackRenderer {
 	return &SlackRenderer{notification: notificationType}
 }
 
-// RenderEventMessage returns Slack message based on a given event.
-func (b *SlackRenderer) RenderEventMessage(event events.Event) slack.Attachment {
+// RenderLegacyEventMessage returns Slack message based on a given event.
+func (b *SlackRenderer) RenderLegacyEventMessage(event events.Event) slack.Attachment {
 	var attachment slack.Attachment
 
 	switch b.notification.Type {
 	case config.LongNotification:
-		attachment = b.longNotification(event)
+		attachment = b.legacyLongNotification(event)
 	case config.ShortNotification:
 		fallthrough
 	default:
-		attachment = b.shortNotification(event)
+		attachment = b.legacyShortNotification(event)
 	}
 
 	// Add timestamp
@@ -67,7 +67,6 @@ func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additi
 	switch b.notification.Type {
 	case config.LongNotification:
 		sections = append(sections, b.longNotificationSection(event))
-		fallthrough
 	case config.ShortNotification:
 		fallthrough
 	default:
@@ -197,6 +196,10 @@ func (b *SlackRenderer) renderSection(in interactive.Section) []slack.Block {
 		out = append(out, b.mdTextSection(in.Description))
 	}
 
+	if len(in.TextFields) > 0 {
+		out = append(out, b.renderTextFields(in.TextFields))
+	}
+
 	if in.Body.Plaintext != "" {
 		out = append(out, b.mdTextSection(in.Body.Plaintext))
 	}
@@ -220,6 +223,24 @@ func (b *SlackRenderer) renderSection(in interactive.Section) []slack.Block {
 	}
 
 	return out
+}
+
+func (b *SlackRenderer) renderTextFields(in interactive.TextFields) slack.Block {
+	var textBlockObjs []*slack.TextBlockObject
+	for _, item := range in {
+		if item.Text == "" {
+			// Skip empty sections
+			continue
+		}
+
+		textBlockObjs = append(textBlockObjs, slack.NewTextBlockObject(slack.MarkdownType, item.Text, false, false))
+	}
+
+	return slack.NewSectionBlock(
+		nil,
+		textBlockObjs,
+		nil,
+	)
 }
 
 func (b *SlackRenderer) renderContext(in []interactive.ContextItem) []slack.Block {
@@ -343,36 +364,71 @@ func (*SlackRenderer) plainTextBlock(msg string) *slack.TextBlockObject {
 }
 
 func (b *SlackRenderer) longNotificationSection(event events.Event) interactive.Section {
-	attachment := slack.Attachment{
-		Pretext: fmt.Sprintf("*%s*", event.Title),
-		Fields: []slack.AttachmentField{
-			{
-				Title: "Kind",
-				Value: event.Kind,
-				Short: true,
-			},
-			{
+	section := b.baseNotificationSection(event)
+	section.TextFields = interactive.TextFields{
+		{Text: fmt.Sprintf("*Kind:* %s", event.Kind)},
+		{Text: fmt.Sprintf("*Name:* %s", event.Name)},
+	}
+	section.TextFields = b.appendTextFieldIfNotEmpty(section.TextFields, "Namespace", event.Namespace)
+	section.TextFields = b.appendTextFieldIfNotEmpty(section.TextFields, "Reason", event.Reason)
+	section.TextFields = b.appendTextFieldIfNotEmpty(section.TextFields, "Action", event.Action)
+	section.TextFields = b.appendTextFieldIfNotEmpty(section.TextFields, "Cluster", event.Cluster)
 
-				Title: "Name",
-				Value: event.Name,
-				Short: true,
-			},
-		},
-		Footer: "Botkube",
+	strBuilder := strings.Builder{}
+	b.writeStringIfNotEmpty(&strBuilder, "Messages", formatx.BulletPointListFromMessages(event.Messages))
+	b.writeStringIfNotEmpty(&strBuilder, "Recommendations", formatx.BulletPointListFromMessages(event.Recommendations))
+	b.writeStringIfNotEmpty(&strBuilder, "Warnings", formatx.BulletPointListFromMessages(event.Warnings))
+	if strBuilder.String() != "" {
+		section.Body.Plaintext = strBuilder.String()
 	}
 
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Namespace, "Namespace", true)
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Reason, "Reason", true)
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, formatx.JoinMessages(event.Messages), "Message", false)
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Action, "Action", true)
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, formatx.JoinMessages(event.Recommendations), "Recommendations", false)
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, formatx.JoinMessages(event.Warnings), "Warnings", false)
-	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Cluster, "Cluster", false)
-
-	return attachment
+	return section
 }
 
-func (b *SlackRenderer) longNotification(event events.Event) slack.Attachment {
+func (b *SlackRenderer) appendTextFieldIfNotEmpty(fields []interactive.TextField, title, in string) []interactive.TextField {
+	if in == "" {
+		return fields
+	}
+	return append(fields, interactive.TextField{
+		Text: fmt.Sprintf("*%s:* %s", title, in),
+	})
+}
+
+func (b *SlackRenderer) writeStringIfNotEmpty(strBuilder *strings.Builder, title, in string) {
+	if in == "" {
+		return
+	}
+
+	strBuilder.WriteString(fmt.Sprintf("*%s:*\n%s", title, in))
+}
+
+func (b *SlackRenderer) shortNotificationSection(event events.Event) interactive.Section {
+	section := b.baseNotificationSection(event)
+	section.Base.Description = formatx.ShortMessage(event)
+
+	return section
+}
+
+func (b *SlackRenderer) baseNotificationSection(event events.Event) interactive.Section {
+	emoji := emojiForLevel[event.Level]
+	section := interactive.Section{
+		Base: interactive.Base{
+			Header: fmt.Sprintf("%s %s", emoji, event.Title),
+		},
+	}
+
+	if !event.TimeStamp.IsZero() {
+		fallbackTimestampText := event.TimeStamp.Format(time.RFC1123)
+		timestampText := fmt.Sprintf("<!date^%d^{date_num} {time_secs}|%s>", event.TimeStamp.Unix(), fallbackTimestampText)
+		section.Context = []interactive.ContextItem{{
+			Text: timestampText,
+		}}
+	}
+
+	return section
+}
+
+func (b *SlackRenderer) legacyLongNotification(event events.Event) slack.Attachment {
 	attachment := slack.Attachment{
 		Pretext: fmt.Sprintf("*%s*", event.Title),
 		Fields: []slack.AttachmentField{
@@ -413,27 +469,7 @@ func (b *SlackRenderer) appendIfNotEmpty(fields []slack.AttachmentField, in stri
 	})
 }
 
-func (b *SlackRenderer) shortNotificationSection(event events.Event) interactive.Section {
-	emoji := emojiForLevel[event.Level]
-	section := interactive.Section{
-		Base: interactive.Base{
-			Header:      fmt.Sprintf("%s %s", emoji, event.Title),
-			Description: formatx.ShortMessage(event),
-		},
-	}
-
-	if !event.TimeStamp.IsZero() {
-		fallbackTimestampText := event.TimeStamp.Format(time.RFC1123)
-		timestampText := fmt.Sprintf("<!date^%d^{date_num} {time_secs}|%s>", event.TimeStamp.Unix(), fallbackTimestampText)
-		section.Context = []interactive.ContextItem{{
-			Text: timestampText,
-		}}
-	}
-
-	return section
-}
-
-func (b *SlackRenderer) shortNotification(event events.Event) slack.Attachment {
+func (b *SlackRenderer) legacyShortNotification(event events.Event) slack.Attachment {
 	return slack.Attachment{
 		Title: event.Title,
 		Fields: []slack.AttachmentField{
