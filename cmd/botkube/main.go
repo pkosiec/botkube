@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
-	cacheddiscovery "k8s.io/client-go/discovery/cached"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -161,7 +161,7 @@ func run() error {
 	router := sources.NewRouter(mapper, dynamicCli, logger.WithField(componentLogFieldKey, "Router"))
 
 	cmdGuard := kubectl.NewCommandGuard(logger.WithField(componentLogFieldKey, "Command Guard"), discoveryCli)
-	commander := kubectl.NewCommander(kcMerger, cmdGuard)
+	commander := kubectl.NewCommander(logger.WithField(componentLogFieldKey, "Commander"), kcMerger, cmdGuard)
 
 	commCfg := conf.Communications
 	var (
@@ -396,7 +396,7 @@ func getK8sClients(cfg *rest.Config) (dynamic.Interface, discovery.DiscoveryInte
 		return nil, nil, nil, fmt.Errorf("while creating dynamic K8s client: %w", err)
 	}
 
-	discoCacheClient := cacheddiscovery.NewMemCacheClient(discoveryClient)
+	discoCacheClient := memory.NewMemCacheClient(discoveryClient)
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoCacheClient)
 	return dynamicK8sCli, discoveryClient, mapper, nil
 }

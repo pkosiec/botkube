@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/botkube/pkg/execute/kubectl"
 	"regexp"
 	"strings"
 	"sync"
@@ -18,6 +17,7 @@ import (
 	"github.com/kubeshop/botkube/pkg/config"
 	"github.com/kubeshop/botkube/pkg/events"
 	"github.com/kubeshop/botkube/pkg/execute"
+	"github.com/kubeshop/botkube/pkg/execute/kubectl"
 	"github.com/kubeshop/botkube/pkg/multierror"
 	"github.com/kubeshop/botkube/pkg/sliceutil"
 	"github.com/kubeshop/botkube/pkg/utils"
@@ -30,6 +30,7 @@ import (
 
 var _ Bot = &SocketSlack{}
 
+// EventCommandProvider describes a provider for event commands.
 type EventCommandProvider interface {
 	GetCommandsForEvent(event events.Event, executorBindings []string) ([]kubectl.Command, error)
 }

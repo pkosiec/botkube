@@ -54,7 +54,6 @@ func (b *SlackRenderer) RenderEventMessage(event events.Event) slack.Attachment 
 
 // RenderEventInteractiveMessage returns Slack interactive message based on a given event.
 func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalSections ...interactive.Section) interactive.Message {
-
 	var sections []interactive.Section
 
 	switch b.notification.Type {

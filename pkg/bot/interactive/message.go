@@ -38,10 +38,6 @@ func (msg *Message) HasSections() bool {
 	return len(msg.Sections) != 0
 }
 
-type Actions struct {
-	Selects Selects
-}
-
 // Select holds data related to the select drop-down.
 type Select struct {
 	Name    string
@@ -74,12 +70,15 @@ type Section struct {
 	Context     ContextItems
 }
 
+// ContextItems holds context items.
 type ContextItems []ContextItem
 
+// IsDefined returns true if there are any context items defined.
 func (c ContextItems) IsDefined() bool {
 	return len(c) > 0
 }
 
+// ContextItem holds context item.
 type ContextItem struct {
 	Text string
 }

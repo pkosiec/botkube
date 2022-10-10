@@ -2,25 +2,39 @@ package kubectl
 
 import (
 	"fmt"
-	"github.com/kubeshop/botkube/pkg/events"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/kubeshop/botkube/pkg/config"
+	"github.com/kubeshop/botkube/pkg/events"
 )
 
-type Commander struct {
-	merger *Merger
-	guard  *CommandGuard
-}
-
-func NewCommander(merger *Merger, guard *CommandGuard) *Commander {
-	return &Commander{merger: merger, guard: guard}
-}
-
+// Command defines a command that is executed by the app.
 type Command struct {
 	Name string
 	Cmd  string
 }
 
+// Commander is responsible for generating kubectl commands for the given event.
+type Commander struct {
+	log    logrus.FieldLogger
+	merger *Merger
+	guard  *CommandGuard
+}
+
+// NewCommander creates a new Commander instance.
+func NewCommander(log logrus.FieldLogger, merger *Merger, guard *CommandGuard) *Commander {
+	return &Commander{log: log, merger: merger, guard: guard}
+}
+
+// GetCommandsForEvent returns a list of commands for the given event based on the executor bindings.
 func (c *Commander) GetCommandsForEvent(event events.Event, executorBindings []string) ([]Command, error) {
+	if event.Type == config.DeleteEvent {
+		c.log.Debug("Skipping commands for the DELETE type of event for %q...", event.Kind)
+		return nil, nil
+	}
+
 	enabledKubectls := c.merger.MergeForNamespace(executorBindings, event.Namespace)
 
 	resourceTypeParts := strings.Split(event.Resource, "/")
@@ -33,12 +47,21 @@ func (c *Commander) GetCommandsForEvent(event events.Event, executorBindings []s
 
 	allowedVerbs := enabledKubectls.AllowedKubectlVerb
 
+	resMap, err := c.guard.GetServerResourceMap()
+	if err != nil {
+		return nil, err
+	}
+
 	var commands []Command
 	for verb := range allowedVerbs {
-		res, err := c.guard.GetResourceDetails(verb, resourceName)
+		res, err := c.guard.GetResourceDetailsFromMap(verb, resourceName, resMap)
 		if err != nil {
-			// TODO:
-			continue
+			if err == ErrVerbNotFound {
+				c.log.Warnf("Not supported verb %q for resource %q. Skipping...", verb, resourceName)
+				continue
+			}
+
+			return nil, fmt.Errorf("while getting resource details: %w", err)
 		}
 
 		var resourceSubstr string

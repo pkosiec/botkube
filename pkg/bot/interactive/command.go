@@ -1,16 +1,17 @@
 package interactive
 
+// EventCommandsSection defines a structure of commands for a given event.
 func EventCommandsSection(cmdPrefix string, optionItems []OptionItem) Section {
 	section := Section{
 		Selects: Selects{
 			ID: "",
 			Items: []Select{
 				{
-					Name:    "Command",
+					Name:    "Select command...",
 					Command: cmdPrefix,
 					OptionGroups: []OptionGroup{
 						{
-							Name:    "Commands",
+							Name:    "Supported commands",
 							Options: optionItems,
 						},
 					},
