@@ -36,14 +36,6 @@ var attachmentColor = map[config.Level]string{
 	config.Critical: "danger",
 }
 
-var emojiForLevel = map[config.Level]string{
-	config.Info:     ":large_green_circle:",
-	config.Warn:     ":warning:",
-	config.Debug:    ":large_green_circle:",
-	config.Error:    ":x:",
-	config.Critical: ":x:",
-}
-
 // Slack listens for user's message, execute commands and sends back the response.
 type Slack struct {
 	log             logrus.FieldLogger

@@ -20,6 +20,14 @@ const (
 	cmdButtonActionIDPrefix = "cmd:"
 )
 
+var emojiForLevel = map[config.Level]string{
+	config.Info:     ":large_green_circle:",
+	config.Warn:     ":warning:",
+	config.Debug:    ":information_source:",
+	config.Error:    ":x:",
+	config.Critical: ":x:",
+}
+
 // SlackRenderer provides functionality to render Slack specific messages from a generic models.
 type SlackRenderer struct {
 	notification config.Notification
@@ -58,8 +66,8 @@ func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additi
 
 	switch b.notification.Type {
 	case config.LongNotification:
-		//sections = append(sections, b.longNotificationBlocks(event))
-		fallthrough // FIXME: Remove
+		sections = append(sections, b.longNotificationSection(event))
+		fallthrough
 	case config.ShortNotification:
 		fallthrough
 	default:
@@ -332,6 +340,36 @@ func (*SlackRenderer) mdTextSection(in string, args ...any) *slack.SectionBlock 
 
 func (*SlackRenderer) plainTextBlock(msg string) *slack.TextBlockObject {
 	return slack.NewTextBlockObject(slack.PlainTextType, msg, false, false)
+}
+
+func (b *SlackRenderer) longNotificationSection(event events.Event) interactive.Section {
+	attachment := slack.Attachment{
+		Pretext: fmt.Sprintf("*%s*", event.Title),
+		Fields: []slack.AttachmentField{
+			{
+				Title: "Kind",
+				Value: event.Kind,
+				Short: true,
+			},
+			{
+
+				Title: "Name",
+				Value: event.Name,
+				Short: true,
+			},
+		},
+		Footer: "Botkube",
+	}
+
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Namespace, "Namespace", true)
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Reason, "Reason", true)
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, formatx.JoinMessages(event.Messages), "Message", false)
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Action, "Action", true)
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, formatx.JoinMessages(event.Recommendations), "Recommendations", false)
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, formatx.JoinMessages(event.Warnings), "Warnings", false)
+	attachment.Fields = b.appendIfNotEmpty(attachment.Fields, event.Cluster, "Cluster", false)
+
+	return attachment
 }
 
 func (b *SlackRenderer) longNotification(event events.Event) slack.Attachment {
