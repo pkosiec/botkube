@@ -60,8 +60,8 @@ func (b *SlackRenderer) RenderLegacyEventMessage(event events.Event) slack.Attac
 	return attachment
 }
 
-// RenderEventInteractiveMessage returns Slack interactive message based on a given event.
-func (b *SlackRenderer) RenderEventInteractiveMessage(event events.Event, additionalSections ...interactive.Section) interactive.Message {
+// RenderEventMessage returns Slack interactive message based on a given event.
+func (b *SlackRenderer) RenderEventMessage(event events.Event, additionalSections ...interactive.Section) interactive.Message {
 	var sections []interactive.Section
 
 	switch b.notification.Type {
@@ -374,13 +374,8 @@ func (b *SlackRenderer) longNotificationSection(event events.Event) interactive.
 	section.TextFields = b.appendTextFieldIfNotEmpty(section.TextFields, "Action", event.Action)
 	section.TextFields = b.appendTextFieldIfNotEmpty(section.TextFields, "Cluster", event.Cluster)
 
-	strBuilder := strings.Builder{}
-	b.writeStringIfNotEmpty(&strBuilder, "Messages", formatx.BulletPointListFromMessages(event.Messages))
-	b.writeStringIfNotEmpty(&strBuilder, "Recommendations", formatx.BulletPointListFromMessages(event.Recommendations))
-	b.writeStringIfNotEmpty(&strBuilder, "Warnings", formatx.BulletPointListFromMessages(event.Warnings))
-	if strBuilder.String() != "" {
-		section.Body.Plaintext = strBuilder.String()
-	}
+	// Messages, Recommendations and Warnings formatted as bullet point lists.
+	section.Body.Plaintext = formatx.BulletPointEventAttachments(event)
 
 	return section
 }
@@ -394,17 +389,22 @@ func (b *SlackRenderer) appendTextFieldIfNotEmpty(fields []interactive.TextField
 	})
 }
 
-func (b *SlackRenderer) writeStringIfNotEmpty(strBuilder *strings.Builder, title, in string) {
-	if in == "" {
-		return
-	}
-
-	strBuilder.WriteString(fmt.Sprintf("*%s:*\n%s", title, in))
-}
-
 func (b *SlackRenderer) shortNotificationSection(event events.Event) interactive.Section {
 	section := b.baseNotificationSection(event)
-	section.Base.Description = formatx.ShortMessage(event)
+
+	header := formatx.ShortNotificationHeader(event)
+	attachments := formatx.BulletPointEventAttachments(event)
+	prefix := ""
+	if attachments != "" {
+		prefix = "\n"
+	}
+
+	section.Base.Description = fmt.Sprintf(
+		"%s\n%s%s",
+		header,
+		prefix,
+		attachments,
+	)
 
 	return section
 }

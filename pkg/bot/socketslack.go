@@ -391,7 +391,7 @@ func (b *SocketSlack) SendEvent(ctx context.Context, event events.Event, eventSo
 		if additionalSection != nil {
 			additionalSections = append(additionalSections, *additionalSection)
 		}
-		msg := b.renderer.RenderEventInteractiveMessage(event, additionalSections...)
+		msg := b.renderer.RenderEventMessage(event, additionalSections...)
 
 		options := []slack.MsgOption{
 			b.renderer.RenderInteractiveMessage(msg),
