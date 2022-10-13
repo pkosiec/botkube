@@ -13,7 +13,7 @@ image:
   # -- Botkube container image registry.
   registry: ghcr.io
   # -- Botkube container image repository.
-  repository: kubeshop/botkube
+  repository: pkosiec/botkube
   # -- Botkube container image pull policy.
   pullPolicy: IfNotPresent
   # -- Botkube container image tag. Default tag is `appVersion` from Chart.yaml.
