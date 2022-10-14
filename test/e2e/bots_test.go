@@ -234,8 +234,8 @@ func runBotTest(t *testing.T,
 			  kubectl:
 			    kubectl-allow-all:
 			      namespaces:
-			        include:
 			          - .*
+			        include:
 			      enabled: true
 			      commands:
 			        verbs:
@@ -503,7 +503,7 @@ func runBotTest(t *testing.T,
 
 		t.Log("Expecting bot message in first channel...")
 		attachAssertionFn := func(title, color, msg string) (bool, int, string) {
-			expectedMsg := fmt.Sprintf("ConfigMap *%s/%s* has been created in *%s* cluster", cfgMap.Namespace, cfgMap.Name, appCfg.ClusterName)
+			expectedMsg := fmt.Sprintf("ConfigMap *%s/%s*  has been created in *%s* cluster", cfgMap.Namespace, cfgMap.Name, appCfg.ClusterName)
 			equal := title == "v1/configmaps created" && msg == expectedMsg && color == botDriver.GetColorByLevel(config.Info)
 			if msg != expectedMsg {
 				count := countMatchBlock(expectedMsg, msg)
