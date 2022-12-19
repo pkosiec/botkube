@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kubeshop/botkube/pkg/format"
 	"net/url"
 	"regexp"
 	"strings"
@@ -345,6 +346,8 @@ func (b *Mattermost) listen(ctx context.Context) {
 				// ignore
 				continue
 			}
+
+			fmt.Printf(">>>> Mattermost message: %s\n", format.StructDumper().Sdump(event.GetData()))
 
 			post, err := postFromEvent(event)
 			if err != nil {

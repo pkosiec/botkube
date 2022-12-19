@@ -152,6 +152,7 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 					innerEvent := eventsAPIEvent.InnerEvent
 					switch ev := innerEvent.Data.(type) {
 					case *slackevents.AppMentionEvent:
+						fmt.Printf(">>>> slack message: %s\n", format.StructDumper().Sdump(innerEvent))
 						b.log.Debugf("Got app mention %s", format.StructDumper().Sdump(innerEvent))
 						msg := socketSlackMessage{
 							Text:            ev.Text,
