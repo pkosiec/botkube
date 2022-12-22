@@ -2,6 +2,10 @@ package execute
 
 import (
 	"fmt"
+	"github.com/kubeshop/botkube/pkg/format"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
 	"strings"
 	"unicode"
 
@@ -14,6 +18,7 @@ import (
 	"github.com/kubeshop/botkube/pkg/config"
 	"github.com/kubeshop/botkube/pkg/execute/kubectl"
 	"github.com/kubeshop/botkube/pkg/sliceutil"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
@@ -191,8 +196,24 @@ func (e *Kubectl) Execute(bindings []string, command string, isAuthChannel bool,
 		}
 	}
 
+	// of course this needs to be moved to global executor to ensure each execution of any plugin has its own kubeconfig
+	kcPath, err := generateKubeconfig(cmdCtx.Conversation.UserEmail, cmdCtx.Conversation.UserGroup)
+	if err != nil {
+		return "", fmt.Errorf("while generating kubeconfig: %w", err)
+	}
+	defer func() {
+		fmt.Println("Removing kubeconfig")
+		err = os.Remove(kcPath)
+		if err != nil {
+			log.Errorf("while removing kubeconfig file: %v", err)
+		}
+	}()
+
+	kcConfigPath := "/tmp/kubeconfig"
+	additionalEnvs := []string{fmt.Sprintf("KUBECONFIG=%s", kcConfigPath)}
+
 	finalArgs := e.getFinalArgs(args)
-	out, err := e.cmdRunner.RunCombinedOutput(KubectlBinary, finalArgs)
+	out, err := e.cmdRunner.RunCombinedOutput(KubectlBinary, finalArgs, additionalEnvs)
 	out = color.ClearCode(out)
 	if err != nil {
 		return "", NewExecutionCommandError("%s%s", out, err.Error())
@@ -318,4 +339,50 @@ func (e *Kubectl) getResourceName(args []string) string {
 func (e *Kubectl) validResourceName(resource string) bool {
 	// ensures that resource name starts with letter
 	return unicode.IsLetter(rune(resource[0]))
+}
+
+func generateKubeconfig(userEmail, userGroup string) (string, error) {
+	restCfg, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("restCfg", format.StructDumper().Sdump(restCfg))
+
+	filename := "/tmp/kubeconfig"
+
+	apiCfg := clientcmdapi.Config{
+		Kind:       "Config",
+		APIVersion: "v1",
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"default": {
+				Server:                   restCfg.Host,
+				CertificateAuthority: restCfg.CAFile,
+			},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"default": {
+				Cluster:   "default",
+				Namespace: "default",
+				AuthInfo:  "default",
+			},
+		},
+		CurrentContext: "default",
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"default": {
+				Token: restCfg.BearerToken,
+				TokenFile: restCfg.BearerTokenFile,
+				Impersonate: userEmail,
+				ImpersonateGroups: []string{userGroup},
+			},
+		},
+	}
+
+	fmt.Println("Writing kubeconfig", format.StructDumper().Sdump(apiCfg))
+	err = clientcmd.WriteToFile(apiCfg, filename)
+	if err != nil {
+		return "", err
+	}
+
+	return filename, nil
 }

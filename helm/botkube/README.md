@@ -173,19 +173,19 @@ Controller for the Botkube Slack app which helps you monitor your Kubernetes clu
 | [nodeSelector](./values.yaml#L769) | object | `{}` | Node labels for Botkube Pod assignment. [Ref doc](https://kubernetes.io/docs/user-guide/node-selection/). |
 | [tolerations](./values.yaml#L773) | list | `[]` | Tolerations for Botkube Pod assignment. [Ref doc](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/). |
 | [affinity](./values.yaml#L777) | object | `{}` | Affinity for Botkube Pod assignment. [Ref doc](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity). |
-| [rbac](./values.yaml#L781) | object | `{"create":true,"rules":[{"apiGroups":["*"],"resources":["*"],"verbs":["get","watch","list"]}]}` | Role Based Access for Botkube Pod. [Ref doc](https://kubernetes.io/docs/admin/authorization/rbac/). |
-| [serviceAccount.create](./values.yaml#L790) | bool | `true` | If true, a ServiceAccount is automatically created. |
-| [serviceAccount.name](./values.yaml#L793) | string | `""` | The name of the service account to use. If not set, a name is generated using the fullname template. |
-| [serviceAccount.annotations](./values.yaml#L795) | object | `{}` | Extra annotations for the ServiceAccount. |
-| [extraObjects](./values.yaml#L798) | list | `[]` | Extra Kubernetes resources to create. Helm templating is allowed as it is evaluated before creating the resources. |
-| [analytics.disable](./values.yaml#L826) | bool | `false` | If true, sending anonymous analytics is disabled. To learn what date we collect, see [Privacy Policy](https://docs.botkube.io/privacy#privacy-policy). |
-| [configWatcher.enabled](./values.yaml#L831) | bool | `true` | If true, restarts the Botkube Pod on config changes. |
-| [configWatcher.tmpDir](./values.yaml#L833) | string | `"/tmp/watched-cfg/"` | Directory, where watched configuration resources are stored. |
-| [configWatcher.initialSyncTimeout](./values.yaml#L836) | int | `0` | Timeout for the initial Config Watcher sync. If set to 0, waiting for Config Watcher sync will be skipped. In a result, configuration changes may not reload Botkube app during the first few seconds after Botkube startup. |
-| [configWatcher.image.registry](./values.yaml#L839) | string | `"ghcr.io"` | Config watcher image registry. |
-| [configWatcher.image.repository](./values.yaml#L841) | string | `"kubeshop/k8s-sidecar"` | Config watcher image repository. |
-| [configWatcher.image.tag](./values.yaml#L843) | string | `"ignore-initial-events"` | Config watcher image tag. |
-| [configWatcher.image.pullPolicy](./values.yaml#L845) | string | `"IfNotPresent"` | Config watcher image pull policy. |
+| [rbac](./values.yaml#L781) | object | `{"create":true}` | Role Based Access for Botkube Pod. [Ref doc](https://kubernetes.io/docs/admin/authorization/rbac/). |
+| [serviceAccount.create](./values.yaml#L786) | bool | `true` | If true, a ServiceAccount is automatically created. |
+| [serviceAccount.name](./values.yaml#L789) | string | `""` | The name of the service account to use. If not set, a name is generated using the fullname template. |
+| [serviceAccount.annotations](./values.yaml#L791) | object | `{}` | Extra annotations for the ServiceAccount. |
+| [extraObjects](./values.yaml#L794) | list | `[]` | Extra Kubernetes resources to create. Helm templating is allowed as it is evaluated before creating the resources. |
+| [analytics.disable](./values.yaml#L822) | bool | `false` | If true, sending anonymous analytics is disabled. To learn what date we collect, see [Privacy Policy](https://docs.botkube.io/privacy#privacy-policy). |
+| [configWatcher.enabled](./values.yaml#L827) | bool | `true` | If true, restarts the Botkube Pod on config changes. |
+| [configWatcher.tmpDir](./values.yaml#L829) | string | `"/tmp/watched-cfg/"` | Directory, where watched configuration resources are stored. |
+| [configWatcher.initialSyncTimeout](./values.yaml#L832) | int | `0` | Timeout for the initial Config Watcher sync. If set to 0, waiting for Config Watcher sync will be skipped. In a result, configuration changes may not reload Botkube app during the first few seconds after Botkube startup. |
+| [configWatcher.image.registry](./values.yaml#L835) | string | `"ghcr.io"` | Config watcher image registry. |
+| [configWatcher.image.repository](./values.yaml#L837) | string | `"kubeshop/k8s-sidecar"` | Config watcher image repository. |
+| [configWatcher.image.tag](./values.yaml#L839) | string | `"ignore-initial-events"` | Config watcher image tag. |
+| [configWatcher.image.pullPolicy](./values.yaml#L841) | string | `"IfNotPresent"` | Config watcher image pull policy. |
 
 ### AWS IRSA on EKS support
 
