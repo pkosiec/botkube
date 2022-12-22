@@ -191,7 +191,7 @@ func TestKubectlExecuteErrors(t *testing.T) {
 
 			wasKubectlExecuted := false
 
-			executor := NewKubectl(loggerx.NewNoop(), cfg, merger, kcChecker, cmdCombinedFunc(func(command string, args []string) (string, error) {
+			executor := NewKubectl(loggerx.NewNoop(), cfg, merger, kcChecker, cmdCombinedFunc(func(command string, args, envs []string) (string, error) {
 				wasKubectlExecuted = true
 				return "kubectl executed", nil
 			}))
@@ -349,7 +349,7 @@ func TestKubectlExecute(t *testing.T) {
 
 			wasKubectlExecuted := false
 
-			executor := NewKubectl(loggerx.NewNoop(), cfg, merger, kcChecker, cmdCombinedFunc(func(command string, args []string) (string, error) {
+			executor := NewKubectl(loggerx.NewNoop(), cfg, merger, kcChecker, cmdCombinedFunc(func(command string, args, envs []string) (string, error) {
 				wasKubectlExecuted = true
 				return "kubectl executed", nil
 			}))
@@ -622,8 +622,8 @@ func fixCfgWithKubectlExecutor(t *testing.T, executor config.Kubectl) config.Con
 }
 
 // cmdCombinedFunc type is an adapter to allow the use of ordinary functions as command handlers.
-type cmdCombinedFunc func(command string, args []string) (string, error)
+type cmdCombinedFunc func(command string, args []string, envs []string) (string, error)
 
-func (f cmdCombinedFunc) RunCombinedOutput(command string, args []string) (string, error) {
-	return f(command, args)
+func (f cmdCombinedFunc) RunCombinedOutput(command string, args, envs []string) (string, error) {
+	return f(command, args, envs)
 }

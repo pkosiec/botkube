@@ -2,9 +2,6 @@ package execute
 
 import (
 	"fmt"
-	"github.com/kubeshop/botkube/pkg/format"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"strings"
 	"unicode"
@@ -13,12 +10,15 @@ import (
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/utils/strings/slices"
 
 	"github.com/kubeshop/botkube/pkg/config"
 	"github.com/kubeshop/botkube/pkg/execute/kubectl"
+	"github.com/kubeshop/botkube/pkg/format"
 	"github.com/kubeshop/botkube/pkg/sliceutil"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
@@ -356,7 +356,7 @@ func generateKubeconfig(userEmail, userGroup string) (string, error) {
 		APIVersion: "v1",
 		Clusters: map[string]*clientcmdapi.Cluster{
 			"default": {
-				Server:                   restCfg.Host,
+				Server:               restCfg.Host,
 				CertificateAuthority: restCfg.CAFile,
 			},
 		},
@@ -370,9 +370,9 @@ func generateKubeconfig(userEmail, userGroup string) (string, error) {
 		CurrentContext: "default",
 		AuthInfos: map[string]*clientcmdapi.AuthInfo{
 			"default": {
-				Token: restCfg.BearerToken,
-				TokenFile: restCfg.BearerTokenFile,
-				Impersonate: userEmail,
+				Token:             restCfg.BearerToken,
+				TokenFile:         restCfg.BearerTokenFile,
+				Impersonate:       userEmail,
 				ImpersonateGroups: []string{userGroup},
 			},
 		},
