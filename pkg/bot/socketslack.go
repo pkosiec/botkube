@@ -152,7 +152,7 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 					innerEvent := eventsAPIEvent.InnerEvent
 					switch ev := innerEvent.Data.(type) {
 					case *slackevents.AppMentionEvent:
-						fmt.Printf(">>>> slack message: %s\n", format.StructDumper().Sdump(innerEvent))
+						fmt.Printf(">>>> slack message: %s\n", format.StructDumper().Sdump(eventsAPIEvent))
 						b.log.Debugf("Got app mention %s", format.StructDumper().Sdump(innerEvent))
 						msg := socketSlackMessage{
 							Text:            ev.Text,
@@ -161,6 +161,13 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 							User:            ev.User,
 							CommandOrigin:   command.TypedOrigin,
 						}
+
+						user, err := b.client.GetUserInfo(ev.User)
+						if err != nil {
+							b.log.Errorf("Message handling error: %s", err.Error())
+						}
+						fmt.Printf(">>>> slack user: %s\n", format.StructDumper().Sdump(user))
+
 						if err := b.handleMessage(ctx, msg); err != nil {
 							b.log.Errorf("Message handling error: %s", err.Error())
 						}
