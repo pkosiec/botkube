@@ -1,7 +1,18 @@
 # RBAC Proof of concept
 
-1. Deploy Botkube
+This PoC is a part of the [RBAC proposal](../../proposal/2022-12-23-rbac.md). It shows how Botkube executor (in this case, `kubectl`) can use
+
+## Instruction
+
+1. Set up a Kubernetes cluster, e.g. with `k3d` or `colima`.
+1. Deploy Botkube with the following values:
+
+```yaml
+```
+
 1. Apply
+
+
 
 ```bash
 k apply -f ./docs/investigation/rbac/assets
