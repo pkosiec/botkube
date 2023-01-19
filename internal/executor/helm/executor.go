@@ -19,6 +19,19 @@ const (
 	description      = "Helm is the Botkube executor plugin that allows you to run the Helm CLI commands directly from any communication platform."
 )
 
+// source https://github.com/helm/helm/releases/tag/v3.6.3
+var helmBinaryDownloadLinks = map[string]string{
+	"darwin/amd64":  "https://get.helm.sh/helm-v3.6.3-darwin-amd64.tar.gz",
+	"darwin/arm64":  "https://get.helm.sh/helm-v3.6.3-darwin-arm64.tar.gz",
+	"linux/amd64":   "https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz",
+	"linux/arm":     "https://get.helm.sh/helm-v3.6.3-linux-arm.tar.gz",
+	"linux/arm64":   "https://get.helm.sh/helm-v3.6.3-linux-arm64.tar.gz",
+	"linux/386":     "https://get.helm.sh/helm-v3.6.3-linux-386.tar.gz",
+	"linux/ppc64le": "https://get.helm.sh/helm-v3.6.3-linux-ppc64le.tar.gz",
+	"linux/s390x":   "https://get.helm.sh/helm-v3.6.3-linux-s390x.tar.gz",
+	"windows/amd64": "https://get.helm.sh/helm-v3.6.3-windows-amd64.zip",
+}
+
 type command interface {
 	Validate() error
 	Help() string
@@ -46,6 +59,11 @@ func (e *Executor) Metadata(context.Context) (api.MetadataOutput, error) {
 		Version:     e.pluginVersion,
 		Description: description,
 		JSONSchema:  jsonSchema(),
+		Dependencies: map[string]api.Dependency{
+			helmBinaryName: {
+				URLs: helmBinaryDownloadLinks,
+			},
+		},
 	}, nil
 }
 
