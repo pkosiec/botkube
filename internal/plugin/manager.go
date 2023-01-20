@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/sirupsen/logrus"
 
+	getter "github.com/hashicorp/go-getter"
 	"github.com/kubeshop/botkube/pkg/api"
 	"github.com/kubeshop/botkube/pkg/api/executor"
 	"github.com/kubeshop/botkube/pkg/api/source"
@@ -198,12 +199,9 @@ func (m *Manager) loadPlugins(ctx context.Context, pluginType Type, pluginsToEna
 			"binPath": binPath,
 		})
 
-		if _, err := os.Stat(binPath); os.IsNotExist(err) {
-			log.Debug("Executor plugin not found locally")
-			err := m.downloadPlugin(ctx, binPath, latestPluginInfo)
-			if err != nil {
-				return nil, fmt.Errorf("while fetching plugin %q binary: %w", pluginKey, err)
-			}
+		err = m.ensurePluginDownloaded(ctx, binPath, latestPluginInfo)
+		if err != nil {
+			return nil, fmt.Errorf("while fetching plugin %q binary: %w", pluginKey, err)
 		}
 
 		loadedPlugins[pluginKey] = binPath
@@ -379,6 +377,8 @@ func newPluginOSRunCommand(path string) *exec.Cmd {
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", pathEnvVal))
 
+	fmt.Println(cmd.Env)
+
 	// Set Kubeconfig env
 	val, found := os.LookupEnv("KUBECONFIG")
 	if found {
@@ -388,69 +388,100 @@ func newPluginOSRunCommand(path string) *exec.Cmd {
 	return cmd
 }
 
-func (m *Manager) downloadPlugin(ctx context.Context, binPath string, info storeEntry) error {
-	err := os.MkdirAll(filepath.Dir(binPath), dirPerms)
-	if err != nil {
-		return fmt.Errorf("while creating directory where plugin should be stored: %w", err)
-	}
-
+func (m *Manager) ensurePluginDownloaded(ctx context.Context, binPath string, info storeEntry) error {
 	selector := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 
-	url, found := info.URLs[selector]
-	if !found {
-		return NewNotFoundPluginError("cannot find download url for %s", selector)
-	}
-
-	// TODO: Download plugins and all dependencies in parallel
-
-	m.log.WithFields(logrus.Fields{
-		"url":     url,
+	log := m.log.WithFields(logrus.Fields{
 		"binPath": binPath,
-	}).Info("Downloading plugin...")
+	})
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
-	if err != nil {
-		return fmt.Errorf("while creating request: %w", err)
-	}
-
-	res, err := m.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("while executing request: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("incorrect status code: %d", res.StatusCode)
-	}
-
-	file, err := os.OpenFile(filepath.Clean(binPath), os.O_RDWR|os.O_CREATE|os.O_TRUNC, binPerms)
-	if err != nil {
-		return fmt.Errorf("while creating plugin file: %w", err)
-	}
-
-	_, err = io.Copy(file, res.Body)
-	file.Close()
-	if err != nil {
-		err := multierror.Append(err, os.Remove(binPath))
-		return fmt.Errorf("while downloading file: %w", err.ErrorOrNil())
-	}
-
-	// Download all dependencies
-	depDir := dependencyDirForBin(binPath)
-	m.log.WithFields(logrus.Fields{
-		"url":     url,
-		"binPath": binPath,
-	}).Info("Downloading plugin dependencies...")
-	for depName, dep := range info.Dependencies {
-		url, found := dep[selector]
-		if !found {
-			return NewNotFoundPluginError("cannot find download url for current platform for a dependency %q of %q", depName, url)
+	// Ensure plugin downloaded
+	if !doesBinaryExist(binPath) {
+		err := os.MkdirAll(filepath.Dir(binPath), dirPerms)
+		if err != nil {
+			return fmt.Errorf("while creating directory where plugin should be stored: %w", err)
 		}
 
-		// TODO: Download
-		depPath := filepath.Join(depDir, depName)
-		fmt.Println(depPath)
+		url, found := info.URLs[selector]
+		if !found {
+			return NewNotFoundPluginError("cannot find download url for %s", selector)
+		}
 
+		log.WithFields(logrus.Fields{
+			"url": url,
+		}).Info("Downloading plugin...")
+
+		err = m.downloadBinary(ctx, binPath, url)
+		if err != nil {
+			return fmt.Errorf("while downloading dependency from URL %q: %w", url, err)
+		}
+	}
+
+	// Ensure all dependencies are downloaded
+	log.WithFields(logrus.Fields{
+		"binPath": binPath,
+	}).Info("Ensuring plugin dependencies are downloaded...")
+	depDir := dependencyDirForBin(binPath)
+	for depName, dep := range info.Dependencies {
+		depPath := filepath.Join(depDir, depName)
+		if doesBinaryExist(depPath) {
+			m.log.Debugf("Binary %q found locally. Skipping...", depName)
+			continue
+		}
+
+		depURL, found := dep[selector]
+		if !found {
+			return NewNotFoundPluginError("cannot find download url for current platform for a dependency %q of the plugin %q", depName, binPath)
+		}
+
+		log.WithFields(logrus.Fields{
+			"dependencyName": depName,
+			"dependencyUrl":  depURL,
+		}).Info("Downloading dependency...")
+
+		err := m.downloadBinary(ctx, depPath, depURL)
+		if err != nil {
+			return fmt.Errorf("while downloading dependency %q for %q: %w", depName, binPath, err)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) downloadBinary(ctx context.Context, destPath, url string) error {
+	dir, filename := filepath.Split(destPath)
+	err := os.MkdirAll(dir, dirPerms)
+	if err != nil {
+		return fmt.Errorf("while creating directory %q where the binary should be stored: %w", dir, err)
+	}
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("while getting working directory: %w", err)
+	}
+
+	urlWithGoGetterMagicParams := fmt.Sprintf("%s?filename=%s", url, filename)
+
+	getterCli := &getter.Client{
+		Ctx:  ctx,
+		Src:  urlWithGoGetterMagicParams,
+		Dst:  dir,
+		Pwd:  pwd,
+		Dir:  false,
+		Mode: getter.ClientModeAny,
+	}
+
+	err = getterCli.Get()
+	if err != nil {
+		return fmt.Errorf("while downloading binary from URL %q: %w", url, err)
+	}
+
+	// Case 1: file has been downloaded
+	if stat, err := os.Stat(destPath); err == nil && !stat.IsDir() {
+		err = os.Chmod(destPath, binPerms)
+		if err != nil {
+			return fmt.Errorf("while setting permissions for %q: %w", destPath)
+		}
 	}
 
 	return nil
@@ -458,4 +489,13 @@ func (m *Manager) downloadPlugin(ctx context.Context, binPath string, info store
 
 func dependencyDirForBin(binPath string) string {
 	return fmt.Sprintf("%s_deps", binPath)
+}
+
+func doesBinaryExist(path string) bool {
+	stat, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return err != nil && !stat.IsDir()
 }
