@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/MakeNowJust/heredoc"
@@ -79,4 +81,25 @@ func TestCollectEnabledRepositories(t *testing.T) {
 			assert.EqualError(t, err, tc.expErrMsg)
 		})
 	}
+}
+
+func TestNewPluginOSRunCommand_HappyPath(t *testing.T) {
+	// given
+	path := "/tmp/plugins/executor_v0.1.0_helm"
+	depsPath := "/tmp/plugins/executor_v0.1.0_helm_deps"
+
+	// when
+	actual := newPluginOSRunCommand(path)
+
+	// then
+	assert.Equal(t, path, actual.Path)
+	var found bool
+	for _, env := range actual.Env {
+		if strings.HasPrefix(env, "PATH=") {
+			assert.True(t, strings.HasPrefix(env, fmt.Sprintf("PATH=%s", depsPath)))
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
 }

@@ -192,7 +192,6 @@ func (m *Manager) loadPlugins(ctx context.Context, pluginType Type, pluginsToEna
 		}
 
 		binPath := filepath.Join(m.cfg.CacheDir, repoName, fmt.Sprintf("%s_%s_%s", pluginType, ver, pluginName))
-
 		log := m.log.WithFields(logrus.Fields{
 			"plugin":  pluginKey,
 			"version": ver,
@@ -339,7 +338,6 @@ func createGRPCClients[C any](logger logrus.FieldLogger, bins map[string]string,
 				MagicCookieKey:   api.HandshakeConfig.MagicCookieKey,
 				MagicCookieValue: api.HandshakeConfig.MagicCookieValue,
 			},
-
 			Logger:     pluginLogger,
 			SyncStdout: stdoutLogger,
 			SyncStderr: stderrLogger,
@@ -372,10 +370,21 @@ func createGRPCClients[C any](logger logrus.FieldLogger, bins map[string]string,
 
 func newPluginOSRunCommand(path string) *exec.Cmd {
 	cmd := exec.Command(path)
+
+	// Set PATH env
+	pathEnvVal := dependencyDirForBin(path)
+	currentPathEnvVal, found := os.LookupEnv("PATH")
+	if found {
+		pathEnvVal = fmt.Sprintf("%s:%s", pathEnvVal, currentPathEnvVal)
+	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", pathEnvVal))
+
+	// Set Kubeconfig env
 	val, found := os.LookupEnv("KUBECONFIG")
 	if found {
-		cmd.Env = []string{fmt.Sprintf("KUBECONFIG=%s", val)}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", val))
 	}
+
 	return cmd
 }
 
@@ -392,10 +401,12 @@ func (m *Manager) downloadPlugin(ctx context.Context, binPath string, info store
 		return NewNotFoundPluginError("cannot find download url for %s", selector)
 	}
 
+	// TODO: Download plugins and all dependencies in parallel
+
 	m.log.WithFields(logrus.Fields{
 		"url":     url,
 		"binPath": binPath,
-	}).Info("Downloading plugin.")
+	}).Info("Downloading plugin...")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
@@ -424,5 +435,27 @@ func (m *Manager) downloadPlugin(ctx context.Context, binPath string, info store
 		return fmt.Errorf("while downloading file: %w", err.ErrorOrNil())
 	}
 
+	// Download all dependencies
+	depDir := dependencyDirForBin(binPath)
+	m.log.WithFields(logrus.Fields{
+		"url":     url,
+		"binPath": binPath,
+	}).Info("Downloading plugin dependencies...")
+	for depName, dep := range info.Dependencies {
+		url, found := dep[selector]
+		if !found {
+			return NewNotFoundPluginError("cannot find download url for current platform for a dependency %q of %q", depName, url)
+		}
+
+		// TODO: Download
+		depPath := filepath.Join(depDir, depName)
+		fmt.Println(depPath)
+
+	}
+
 	return nil
+}
+
+func dependencyDirForBin(binPath string) string {
+	return fmt.Sprintf("%s_deps", binPath)
 }
