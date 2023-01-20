@@ -20,16 +20,17 @@ const (
 )
 
 // source https://github.com/helm/helm/releases/tag/v3.6.3
+// using go-getter syntax
 var helmBinaryDownloadLinks = map[string]string{
-	"darwin/amd64":  "https://get.helm.sh/helm-v3.6.3-darwin-amd64.tar.gz",
-	"darwin/arm64":  "https://get.helm.sh/helm-v3.6.3-darwin-arm64.tar.gz",
-	"linux/amd64":   "https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz",
-	"linux/arm":     "https://get.helm.sh/helm-v3.6.3-linux-arm.tar.gz",
-	"linux/arm64":   "https://get.helm.sh/helm-v3.6.3-linux-arm64.tar.gz",
-	"linux/386":     "https://get.helm.sh/helm-v3.6.3-linux-386.tar.gz",
-	"linux/ppc64le": "https://get.helm.sh/helm-v3.6.3-linux-ppc64le.tar.gz",
-	"linux/s390x":   "https://get.helm.sh/helm-v3.6.3-linux-s390x.tar.gz",
-	"windows/amd64": "https://get.helm.sh/helm-v3.6.3-windows-amd64.zip",
+	"darwin/amd64":  "https://get.helm.sh/helm-v3.6.3-darwin-amd64.tar.gz//darwin-amd64",
+	"darwin/arm64":  "https://get.helm.sh/helm-v3.6.3-darwin-arm64.tar.gz//darwin-arm64",
+	"linux/amd64":   "https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz//linux-amd64",
+	"linux/arm":     "https://get.helm.sh/helm-v3.6.3-linux-arm.tar.gz//linux-arm",
+	"linux/arm64":   "https://get.helm.sh/helm-v3.6.3-linux-arm64.tar.gz//linux-arm64",
+	"linux/386":     "https://get.helm.sh/helm-v3.6.3-linux-386.tar.gz//linux-386",
+	"linux/ppc64le": "https://get.helm.sh/helm-v3.6.3-linux-ppc64le.tar.gz//linux-ppc64le",
+	"linux/s390x":   "https://get.helm.sh/helm-v3.6.3-linux-s390x.tar.gz//linux-s390x",
+	"windows/amd64": "https://get.helm.sh/helm-v3.6.3-windows-amd64.zip//windows-amd64",
 }
 
 type command interface {

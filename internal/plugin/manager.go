@@ -29,6 +29,7 @@ const (
 	dirPerms  = 0o775
 	binPerms  = 0o755
 	filePerms = 0o664
+	dependencyDirEnvName="PLUGIN_DEPENDENCY_DIR"
 )
 
 // pluginMap is the map of plugins we can dispense.
@@ -369,17 +370,11 @@ func createGRPCClients[C any](logger logrus.FieldLogger, bins map[string]string,
 func newPluginOSRunCommand(path string) *exec.Cmd {
 	cmd := exec.Command(path)
 
-	// Set PATH env
-	pathEnvVal := dependencyDirForBin(path)
-	currentPathEnvVal, found := os.LookupEnv("PATH")
-	if found {
-		pathEnvVal = fmt.Sprintf("%s:%s", pathEnvVal, currentPathEnvVal)
-	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", pathEnvVal))
+	// Set path to dependencies
+	depDir := dependencyDirForBin(path)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", dependencyDirEnvName, depDir))
 
-	fmt.Println(cmd.Env)
-
-	// Set Kubeconfig env
+		// Set Kubeconfig env
 	val, found := os.LookupEnv("KUBECONFIG")
 	if found {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", val))
@@ -476,11 +471,11 @@ func (m *Manager) downloadBinary(ctx context.Context, destPath, url string) erro
 		return fmt.Errorf("while downloading binary from URL %q: %w", url, err)
 	}
 
-	// Case 1: file has been downloaded
 	if stat, err := os.Stat(destPath); err == nil && !stat.IsDir() {
+
 		err = os.Chmod(destPath, binPerms)
 		if err != nil {
-			return fmt.Errorf("while setting permissions for %q: %w", destPath)
+			return fmt.Errorf("while setting permissions for %q: %w", destPath, err)
 		}
 	}
 
