@@ -51,7 +51,8 @@ type socketSlackMessage struct {
 	Text            string
 	Channel         string
 	ThreadTimeStamp string
-	User            string
+	UserID            string
+	UserName string
 	TriggerID       string
 	CommandOrigin   command.Origin
 	State           *slack.BlockActionStates
@@ -146,7 +147,8 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 							Text:            ev.Text,
 							Channel:         ev.Channel,
 							ThreadTimeStamp: ev.ThreadTimeStamp,
-							User:            ev.User,
+							UserID:            ev.User,
+							UserName: innerEvent.,
 							CommandOrigin:   command.TypedOrigin,
 						}
 						if err := b.handleMessage(ctx, msg); err != nil {
@@ -205,7 +207,8 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 						Channel:         channelID,
 						ThreadTimeStamp: threadTs,
 						TriggerID:       callback.TriggerID,
-						User:            callback.User.ID,
+						UserID:            callback.User.ID,
+						UserName: callback.User.Name,
 						CommandOrigin:   cmdOrigin,
 						State:           state,
 						ResponseURL:     callback.ResponseURL,
@@ -225,7 +228,8 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 							msg := socketSlackMessage{
 								Text:          cmd,
 								Channel:       callback.View.PrivateMetadata,
-								User:          callback.User.ID,
+								UserID:          callback.User.ID,
+								UserName: callback.User.Name,
 								CommandOrigin: cmdOrigin,
 							}
 
@@ -346,7 +350,10 @@ func (b *SocketSlack) handleMessage(ctx context.Context, event socketSlackMessag
 			SlackState:       event.State,
 		},
 		Message: request,
-		User:    fmt.Sprintf("<@%s>", event.User),
+		User:  execute.UserInput{
+			Mention: fmt.Sprintf("<@%s>", event.UserID),
+			DisplayName:    event.UserName,
+		},
 	})
 	response := e.Execute(ctx)
 	err = b.send(ctx, event, response)
@@ -406,7 +413,7 @@ func (b *SocketSlack) send(ctx context.Context, event socketSlackMessage, resp i
 	}
 
 	if resp.OnlyVisibleForYou {
-		if _, err := b.client.PostEphemeralContext(ctx, event.Channel, event.User, options...); err != nil {
+		if _, err := b.client.PostEphemeralContext(ctx, event.Channel, event.UserID, options...); err != nil {
 			return fmt.Errorf("while posting Slack message visible only to user: %w", err)
 		}
 	} else {

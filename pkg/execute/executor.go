@@ -56,7 +56,7 @@ type DefaultExecutor struct {
 	conversation          Conversation
 	merger                *kubectl.Merger
 	commGroupName         string
-	user                  string
+	user                  UserInput
 	kubectlCmdBuilder     *KubectlCmdBuilder
 	cmdsMapping           *CommandMapping
 	auditReporter         audit.AuditReporter
@@ -280,7 +280,7 @@ func header(cmdCtx CommandContext) string {
 	cmd = fmt.Sprintf("`%s`", cmd)
 
 	out := fmt.Sprintf("%s on `%s`", cmd, cmdCtx.ClusterName)
-	return appendByUserOnlyIfNeeded(out, cmdCtx.User, cmdCtx.Conversation.CommandOrigin)
+	return appendByUserOnlyIfNeeded(out, cmdCtx.User.Mention, cmdCtx.Conversation.CommandOrigin)
 }
 
 func removeMultipleSpaces(s string) string {
@@ -302,10 +302,10 @@ func (e *DefaultExecutor) reportAuditEvent(ctx context.Context, cmdCtx CommandCo
 		return err
 	}
 	event := audit.ExecutorAuditEvent{
-		PlatformUser: cmdCtx.User,
+		PlatformUser: cmdCtx.User.DisplayName,
 		CreatedAt:    time.Now().Format(time.RFC3339),
 		PluginName:   cmdCtx.Args[0],
-		Channel:      cmdCtx.CommGroupName,
+		Channel:      cmdCtx.Conversation.ID,
 		Command:      cmdCtx.ExpandedRawCmd,
 		BotPlatform:  platform,
 	}

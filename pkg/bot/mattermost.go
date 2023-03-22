@@ -206,6 +206,11 @@ func (b *Mattermost) handleMessage(ctx context.Context, mm *mattermostMessage) e
 		return fmt.Errorf("while getting post from event: %w", err)
 	}
 
+	// Skip if message posted by Botkube
+	if post.UserId == b.getUser().Id {
+		return nil
+	}
+
 	// Handle message only if starts with mention
 	trimmedMsg, found := b.findAndTrimBotMention(post.Message)
 	if !found {
@@ -230,6 +235,10 @@ func (b *Mattermost) handleMessage(ctx context.Context, mm *mattermostMessage) e
 			SourceBindings:   channel.Bindings.Sources,
 			IsAuthenticated:  mm.IsAuthChannel,
 			CommandOrigin:    command.TypedOrigin,
+		},
+		User: execute.UserInput{
+			Mention:     "", // TODO:
+			DisplayName: "", // TODO:
 		},
 		Message: req,
 	})
@@ -334,7 +343,6 @@ func (b *Mattermost) getTeam() *model.Team {
 func (b *Mattermost) getUser() *model.User {
 	users, _, err := b.apiClient.AutocompleteUsersInTeam(b.getTeam().Id, b.botName, 1, "")
 	if err != nil {
-		b.log.Fatalf("There was a problem finding Mattermost user %s. %s", b.botName, err)
 	}
 	return users.Users[0]
 }
@@ -367,20 +375,11 @@ func (b *Mattermost) listen(ctx context.Context) {
 				continue
 			}
 
-			post, err := postFromEvent(event)
-			if err != nil {
-				continue
-			}
-
-			// Skip if message posted by Botkube or doesn't start with mention
-			if post.UserId == b.getUser().Id {
-				continue
-			}
 			mm := &mattermostMessage{
 				Event:         event,
 				IsAuthChannel: false,
 			}
-			err = b.handleMessage(ctx, mm)
+			err := b.handleMessage(ctx, mm)
 			if err != nil {
 				wrappedErr := fmt.Errorf("while handling message: %w", err)
 				b.log.Errorf(wrappedErr.Error())

@@ -291,6 +291,10 @@ func (b *Teams) processMessage(ctx context.Context, activity schema.Activity) (i
 			SourceBindings:   b.bindings.Sources,
 			CommandOrigin:    command.TypedOrigin,
 		},
+		User: execute.UserInput{
+			Mention:     "", // TODO:
+			DisplayName: "", // TODO:
+		},
 		Message: trimmedMsg,
 	})
 	return b.convertInteractiveMessage(e.Execute(ctx), false)

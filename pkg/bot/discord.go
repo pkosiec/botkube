@@ -232,7 +232,10 @@ func (b *Discord) handleMessage(ctx context.Context, dm discordMessage) error {
 			CommandOrigin:    command.TypedOrigin,
 		},
 		Message: req,
-		User:    fmt.Sprintf("<@%s>", dm.Event.Author.ID),
+		User: execute.UserInput{
+			Mention:     fmt.Sprintf("<@%s>", dm.Event.Author.ID),
+			DisplayName: dm.Event.Author.Username,
+		},
 	})
 
 	response := e.Execute(ctx)

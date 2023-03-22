@@ -195,7 +195,13 @@ type NewDefaultInput struct {
 	NotifierHandler NotifierHandler
 	Conversation    Conversation
 	Message         string
-	User            string
+	User            UserInput
+}
+
+// UserInput contains details about the user.
+type UserInput struct {
+	Mention     string
+	DisplayName string
 }
 
 // NewDefault creates new Default Executor.
