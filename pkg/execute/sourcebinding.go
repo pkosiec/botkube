@@ -108,7 +108,7 @@ func (e *SourceBindingExecutor) Edit(ctx context.Context, cmdCtx CommandContext)
 		return empty, errInvalidCommand
 	}
 	cmdArgs := cmdCtx.Args[2:]
-	msg, err := e.editSourceBindingHandler(ctx, cmdArgs, cmdCtx.CommGroupName, cmdCtx.Platform, cmdCtx.Conversation, cmdCtx.User)
+	msg, err := e.editSourceBindingHandler(ctx, cmdArgs, cmdCtx.CommGroupName, cmdCtx.Platform, cmdCtx.Conversation, cmdCtx.User.Mention)
 	if err != nil {
 		return empty, err
 	}

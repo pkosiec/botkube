@@ -291,6 +291,7 @@ func (e *DefaultExecutor) reportCommand(ctx context.Context, verb string, withFi
 	if err := e.analyticsReporter.ReportCommand(e.platform, verb, e.conversation.CommandOrigin, withFilter); err != nil {
 		e.log.Errorf("while reporting %s command: %s", verb, err.Error())
 	}
+	// TODO: Report proper plugin
 	if err := e.reportAuditEvent(ctx, cmdCtx); err != nil {
 		e.log.Errorf("while reporting executor audit event for %s: %s", verb, err.Error())
 	}

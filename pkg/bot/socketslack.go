@@ -51,8 +51,8 @@ type socketSlackMessage struct {
 	Text            string
 	Channel         string
 	ThreadTimeStamp string
-	UserID            string
-	UserName string
+	UserID          string
+	UserName        string
 	TriggerID       string
 	CommandOrigin   command.Origin
 	State           *slack.BlockActionStates
@@ -147,10 +147,19 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 							Text:            ev.Text,
 							Channel:         ev.Channel,
 							ThreadTimeStamp: ev.ThreadTimeStamp,
-							UserID:            ev.User,
-							UserName: innerEvent.,
+							UserID:          ev.User,
+							UserName:        ev.User, // set to user ID if we can't get the real name
 							CommandOrigin:   command.TypedOrigin,
 						}
+
+						user, err := b.client.GetUserInfoContext(ctx, ev.User)
+						if err != nil {
+							b.log.Errorf("While getting user info: %s", err.Error())
+						}
+						if user != nil && user.RealName != "" {
+							msg.UserName = user.RealName
+						}
+
 						if err := b.handleMessage(ctx, msg); err != nil {
 							b.log.Errorf("Message handling error: %s", err.Error())
 						}
@@ -207,8 +216,8 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 						Channel:         channelID,
 						ThreadTimeStamp: threadTs,
 						TriggerID:       callback.TriggerID,
-						UserID:            callback.User.ID,
-						UserName: callback.User.Name,
+						UserID:          callback.User.ID,
+						UserName:        callback.User.RealName,
 						CommandOrigin:   cmdOrigin,
 						State:           state,
 						ResponseURL:     callback.ResponseURL,
@@ -228,8 +237,8 @@ func (b *SocketSlack) Start(ctx context.Context) error {
 							msg := socketSlackMessage{
 								Text:          cmd,
 								Channel:       callback.View.PrivateMetadata,
-								UserID:          callback.User.ID,
-								UserName: callback.User.Name,
+								UserID:        callback.User.ID,
+								UserName:      callback.User.RealName,
 								CommandOrigin: cmdOrigin,
 							}
 
@@ -350,9 +359,9 @@ func (b *SocketSlack) handleMessage(ctx context.Context, event socketSlackMessag
 			SlackState:       event.State,
 		},
 		Message: request,
-		User:  execute.UserInput{
-			Mention: fmt.Sprintf("<@%s>", event.UserID),
-			DisplayName:    event.UserName,
+		User: execute.UserInput{
+			Mention:     fmt.Sprintf("<@%s>", event.UserID),
+			DisplayName: event.UserName,
 		},
 	})
 	response := e.Execute(ctx)
