@@ -224,6 +224,11 @@ func (b *Mattermost) handleMessage(ctx context.Context, mm *mattermostMessage) e
 	channel, exists := b.getChannels()[channelID]
 	mm.IsAuthChannel = exists
 
+	user, _, err := b.apiClient.GetUser(post.UserId, "")
+	if err != nil {
+		b.log.Errorf("while getting user with ID %q: %s", post.UserId, err.Error())
+	}
+
 	e := b.executorFactory.NewDefault(execute.NewDefaultInput{
 		CommGroupName:   b.commGroupName,
 		Platform:        b.IntegrationName(),
@@ -237,8 +242,8 @@ func (b *Mattermost) handleMessage(ctx context.Context, mm *mattermostMessage) e
 			CommandOrigin:    command.TypedOrigin,
 		},
 		User: execute.UserInput{
-			Mention:     "", // TODO:
-			DisplayName: "", // TODO:
+			//Mention:     "", // not used currently
+			DisplayName: user.Username,
 		},
 		Message: req,
 	})

@@ -198,7 +198,7 @@ func (e *DefaultExecutor) Execute(ctx context.Context) interactive.CoreMessage {
 
 	fn, foundRes, foundFn := e.cmdsMapping.FindFn(cmdVerb, cmdRes)
 	if !foundRes {
-		e.reportCommand(ctx, anonymizedInvalidVerb, false, cmdCtx)
+		e.reportCommand(ctx, "", anonymizedInvalidVerb, false, cmdCtx)
 		e.log.Infof("received unsupported command: %q", cmdCtx.CleanCmd)
 		return respond(unsupportedCmdMsg, cmdCtx)
 	}
@@ -209,7 +209,7 @@ func (e *DefaultExecutor) Execute(ctx context.Context) interactive.CoreMessage {
 			e.log.Infof("received unsupported resource: %q", cmdCtx.CleanCmd)
 			reportedCmd = fmt.Sprintf("%s {invalid feature}", reportedCmd)
 		}
-		e.reportCommand(ctx, reportedCmd, false, cmdCtx)
+		e.reportCommand(ctx, "", reportedCmd, false, cmdCtx)
 		msg := e.cmdsMapping.HelpMessageForVerb(cmdVerb)
 		return respond(msg, cmdCtx)
 	} else {
@@ -217,7 +217,7 @@ func (e *DefaultExecutor) Execute(ctx context.Context) interactive.CoreMessage {
 		if cmdRes != "" {
 			cmdToReport = fmt.Sprintf("%s %s", cmdVerb, cmdRes)
 		}
-		e.reportCommand(ctx, cmdToReport, false, cmdCtx)
+		e.reportCommand(ctx, "", cmdToReport, false, cmdCtx)
 	}
 
 	msg, err := fn(ctx, cmdCtx)
@@ -299,10 +299,8 @@ func (e *DefaultExecutor) reportCommand(ctx context.Context, pluginName, verb st
 }
 
 func (e *DefaultExecutor) reportAuditEvent(ctx context.Context, pluginName string, cmdCtx CommandContext) error {
-	platform, err := remoteapi.NewBotPlatform(cmdCtx.Platform.String())
-	if err != nil {
-		return err
-	}
+	platform := remoteapi.NewBotPlatform(cmdCtx.Platform.String())
+
 	event := audit.ExecutorAuditEvent{
 		PlatformUser: cmdCtx.User.DisplayName,
 		CreatedAt:    time.Now().Format(time.RFC3339),

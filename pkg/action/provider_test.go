@@ -97,12 +97,12 @@ func TestProvider_ExecuteEventAction(t *testing.T) {
 		DisplayName:      "Test",
 	}
 	expectedExecutorInput := execute.NewDefaultInput{
-		CommGroupName:   "unknown",
-		Platform:        "unknown",
+		CommGroupName:   "n/a",
+		Platform:        "n/a",
 		NotifierHandler: nil, // won't check it
 		Conversation: execute.Conversation{
-			Alias:            "unknown",
-			ID:               "unknown",
+			Alias:            "n/a",
+			ID:               "n/a",
 			ExecutorBindings: executorBindings,
 			IsAuthenticated:  true,
 			CommandOrigin:    command.AutomationOrigin,

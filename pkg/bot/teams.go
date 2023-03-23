@@ -292,8 +292,8 @@ func (b *Teams) processMessage(ctx context.Context, activity schema.Activity) (i
 			CommandOrigin:    command.TypedOrigin,
 		},
 		User: execute.UserInput{
-			Mention:     "", // TODO:
-			DisplayName: "", // TODO:
+			//Mention:     "", // not used currently
+			DisplayName: activity.From.Name,
 		},
 		Message: trimmedMsg,
 	})

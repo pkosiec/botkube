@@ -23,7 +23,7 @@ import (
 
 const (
 	// unknownValue defines an unknown string value.
-	unknownValue = "unknown"
+	unknownValue = "n/a"
 )
 
 // ExecutorFactory facilitates creation of execute.Executor instances.

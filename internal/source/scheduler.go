@@ -20,6 +20,7 @@ type PluginDispatch struct {
 	pluginName               string
 	pluginConfigs            []*source.Config
 	sourceName               string
+	sourceDisplayName        string
 	isInteractivitySupported bool
 	cfg                      *config.Config
 }
@@ -144,7 +145,12 @@ func (d *Scheduler) schedulePlugin(ctx context.Context, isInteractivitySupported
 	d.startProcesses[key] = struct{}{}
 
 	sourcePluginConfigs := map[string][]*source.Config{}
-	plugins := d.cfg.Sources[sourceName].Plugins
+	srcConfig, exists := d.cfg.Sources[sourceName]
+	if !exists {
+		return fmt.Errorf("source %q not found", sourceName)
+	}
+
+	plugins := srcConfig.Plugins
 	for pluginName, pluginCfg := range plugins {
 		if !pluginCfg.Enabled {
 			continue
@@ -168,6 +174,7 @@ func (d *Scheduler) schedulePlugin(ctx context.Context, isInteractivitySupported
 			pluginConfigs:            configs,
 			isInteractivitySupported: isInteractivitySupported,
 			sourceName:               sourceName,
+			sourceDisplayName:        srcConfig.DisplayName,
 			cfg:                      d.cfg,
 		})
 		if err != nil {
