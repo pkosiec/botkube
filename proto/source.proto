@@ -29,6 +29,17 @@ message StreamResponse {
 	bytes event = 1;
 }
 
+message ExternalEventRequest {
+	// Configs is a list of Source configurations specified by users.
+	repeated Config configs = 1;
+	// context holds context stream.
+	StreamContext context = 3;
+}
+
+message ExternalEventResponse {
+	bytes event = 1;
+}
+
 message MetadataResponse {
 	// version is a version of a given plugin. It should follow the SemVer syntax.
 	string version = 1;
@@ -54,5 +65,6 @@ message Dependency {
 
 service Source {
 	rpc Stream(StreamRequest) returns (stream StreamResponse) {}
+	rpc HandleExternalEvent(ExternalEventRequest) returns (ExternalEventResponse) {}
 	rpc Metadata(google.protobuf.Empty) returns (MetadataResponse) {}
 }

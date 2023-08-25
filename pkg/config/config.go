@@ -125,10 +125,11 @@ type Config struct {
 	Aliases        Aliases                   `yaml:"aliases" validate:"dive"`
 	Communications map[string]Communications `yaml:"communications"  validate:"required,min=1,dive"`
 
-	Analytics     Analytics        `yaml:"analytics"`
-	Settings      Settings         `yaml:"settings"`
-	ConfigWatcher CfgWatcher       `yaml:"configWatcher"`
-	Plugins       PluginManagement `yaml:"plugins"`
+	Analytics       Analytics        `yaml:"analytics"`
+	Settings        Settings         `yaml:"settings"`
+	ConfigWatcher   CfgWatcher       `yaml:"configWatcher"`
+	Plugins         PluginManagement `yaml:"plugins"`
+	IncomingWebhook IncomingWebhook  `yaml:"incomingWebhook"`
 }
 
 // PluginManagement holds Botkube plugin management related configuration.
@@ -499,6 +500,11 @@ type CfgWatcher struct {
 	InitialSyncTimeout time.Duration  `yaml:"initialSyncTimeout"`
 	TmpDir             string         `yaml:"tmpDir"`
 	Deployment         K8sResourceRef `yaml:"deployment"`
+}
+
+type IncomingWebhook struct {
+	Enabled bool `yaml:"enabled"`
+	Port    int  `yaml:"port"`
 }
 
 // RemoteCfgWatcher describes configuration for watching the configuration using remote config provider.

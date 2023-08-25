@@ -913,6 +913,11 @@ service:
   port: 2112
   targetPort: 2112
 
+incomingWebhook:
+  enabled: true
+  port: 2115
+  targetPort: 2115
+
 # -- Configures Ingress settings that exposes MS Teams endpoint.
 # [Ref doc](https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource).
 ingress:

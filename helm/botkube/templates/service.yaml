@@ -1,4 +1,4 @@
-{{- if or .Values.serviceMonitor.enabled (include "botkube.communication.team.enabled" $) (.Values.settings.lifecycleServer.enabled ) }}
+{{- if or .Values.serviceMonitor.enabled (include "botkube.communication.team.enabled" $) (.Values.settings.lifecycleServer.enabled ) (.Values.incomingWebhookService.enabled) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,6 +12,11 @@ metadata:
 spec:
   type: ClusterIP
   ports:
+  {{- if .Values.incomingWebhook.enabled }}
+    - name: "incoming-webhook"
+      port: {{ .Values.incomingWebhook.port }}
+      targetPort: {{ .Values.incomingWebhook.port }}
+  {{- end }}
   {{- if .Values.settings.lifecycleServer.enabled }}
   - name: "lifecycle"
     port: {{ .Values.settings.lifecycleServer.port }}

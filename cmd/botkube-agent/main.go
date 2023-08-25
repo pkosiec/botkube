@@ -161,6 +161,15 @@ func run(ctx context.Context) (err error) {
 	}
 	defer pluginManager.Shutdown()
 
+	if conf.IncomingWebhook.Enabled {
+		incomingWebhookSrv := plugin.NewIncomingWebhookServer(logger.WithField(componentLogFieldKey, "Incoming Webhook Server"), conf.IncomingWebhook)
+
+		errGroup.Go(func() error {
+			defer analytics.ReportPanicIfOccurs(logger, reporter)
+			return metricsSrv.Serve(ctx)
+		})
+	}
+
 	// Prepare K8s clients and mapper
 	kubeConfig, err := kubex.BuildConfigFromFlags("", conf.Settings.Kubeconfig, conf.Settings.SACredentialsPathPrefix)
 	if err != nil {

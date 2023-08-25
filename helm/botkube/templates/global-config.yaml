@@ -33,3 +33,6 @@ data:
 
     analytics:
       disable: {{ .Values.analytics.disable }}
+
+    incomingWebhook:
+      {{- .Values.incomingWebhook | toYaml | nindent 6 }}
