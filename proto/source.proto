@@ -38,6 +38,8 @@ message ExternalEventRequest {
 
 message ExternalEventResponse {
 	bytes event = 1;
+
+	optional bytes interactiveEvent = 2;
 }
 
 message MetadataResponse {

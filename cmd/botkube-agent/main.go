@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/kubeshop/botkube/internal/source"
+
 	"github.com/google/go-github/v53/github"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,7 +37,6 @@ import (
 	"github.com/kubeshop/botkube/internal/lifecycle"
 	"github.com/kubeshop/botkube/internal/loggerx"
 	"github.com/kubeshop/botkube/internal/plugin"
-	"github.com/kubeshop/botkube/internal/source"
 	"github.com/kubeshop/botkube/internal/status"
 	"github.com/kubeshop/botkube/internal/storage"
 	"github.com/kubeshop/botkube/pkg/action"
@@ -160,15 +161,6 @@ func run(ctx context.Context) (err error) {
 		return fmt.Errorf("while starting plugins manager: %w", err)
 	}
 	defer pluginManager.Shutdown()
-
-	if conf.IncomingWebhook.Enabled {
-		incomingWebhookSrv := plugin.NewIncomingWebhookServer(logger.WithField(componentLogFieldKey, "Incoming Webhook Server"), conf.IncomingWebhook)
-
-		errGroup.Go(func() error {
-			defer analytics.ReportPanicIfOccurs(logger, reporter)
-			return metricsSrv.Serve(ctx)
-		})
-	}
 
 	// Prepare K8s clients and mapper
 	kubeConfig, err := kubex.BuildConfigFromFlags("", conf.Settings.Kubeconfig, conf.Settings.SACredentialsPathPrefix)
@@ -404,6 +396,20 @@ func run(ctx context.Context) (err error) {
 	err = scheduler.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("while starting source plugin event dispatcher: %w", err)
+	}
+
+	if conf.IncomingWebhook.Enabled {
+		incomingWebhookSrv := source.NewIncomingWebhookServer(
+			logger.WithField(componentLogFieldKey, "Incoming Webhook Server"),
+			conf.IncomingWebhook.Port,
+			sourcePluginDispatcher,
+			scheduler.StartedSourcePlugins(),
+		)
+
+		errGroup.Go(func() error {
+			defer analytics.ReportPanicIfOccurs(logger, reporter)
+			return incomingWebhookSrv.Serve(ctx)
+		})
 	}
 
 	// Create and start controller

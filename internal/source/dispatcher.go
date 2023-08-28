@@ -108,7 +108,7 @@ func (d *Dispatcher) Dispatch(dispatch PluginDispatch) error {
 
 	ctx := dispatch.ctx
 	out, err := sourceClient.Stream(ctx, source.StreamInput{
-		Configs: dispatch.pluginConfigs,
+		Configs: []*source.Config{dispatch.pluginConfig},
 		Context: source.StreamInputContext{
 			IsInteractivitySupported: dispatch.isInteractivitySupported,
 			ClusterName:              dispatch.cfg.Settings.ClusterName,
@@ -133,6 +133,11 @@ func (d *Dispatcher) Dispatch(dispatch PluginDispatch) error {
 			}
 		}
 	}()
+	return nil
+}
+
+func (d *Dispatcher) DispatchSingle(dispatch SinglePluginDispatch) error {
+	// TODO: implement
 	return nil
 }
 
