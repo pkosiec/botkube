@@ -80,6 +80,10 @@ func (CMWatcher) Stream(ctx context.Context, in source.StreamInput) (source.Stre
 	return out, nil
 }
 
+func (CMWatcher) HandleSingleDispatch(ctx context.Context, in source.SingleDispatchInput) (source.SingleDispatchOutput, error) {
+	//TODO:
+}
+
 func listenEvents(ctx context.Context, kubeConfig []byte, obj Object, sink chan source.Event) {
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeConfig)
 	exitOnError(err)

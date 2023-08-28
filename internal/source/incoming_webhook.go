@@ -6,9 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+
 	"github.com/kubeshop/botkube/internal/httpx"
 	"github.com/kubeshop/botkube/pkg/multierror"
-	"github.com/sirupsen/logrus"
 )
 
 func NewIncomingWebhookServer(log logrus.FieldLogger, port int, dispatcher *Dispatcher, startedSources map[string][]StartedSource) *httpx.Server {

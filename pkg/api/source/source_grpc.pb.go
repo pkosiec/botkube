@@ -20,8 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Source_Stream_FullMethodName   = "/source.Source/Stream"
-	Source_Metadata_FullMethodName = "/source.Source/Metadata"
+	Source_Stream_FullMethodName               = "/source.Source/Stream"
+	Source_HandleSingleDispatch_FullMethodName = "/source.Source/HandleSingleDispatch"
+	Source_Metadata_FullMethodName             = "/source.Source/Metadata"
 )
 
 // SourceClient is the client API for Source service.
@@ -29,6 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SourceClient interface {
 	Stream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (Source_StreamClient, error)
+	HandleSingleDispatch(ctx context.Context, in *SingleDispatchRequest, opts ...grpc.CallOption) (*SingleDispatchResponse, error)
 	Metadata(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*MetadataResponse, error)
 }
 
@@ -72,6 +74,15 @@ func (x *sourceStreamClient) Recv() (*StreamResponse, error) {
 	return m, nil
 }
 
+func (c *sourceClient) HandleSingleDispatch(ctx context.Context, in *SingleDispatchRequest, opts ...grpc.CallOption) (*SingleDispatchResponse, error) {
+	out := new(SingleDispatchResponse)
+	err := c.cc.Invoke(ctx, Source_HandleSingleDispatch_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sourceClient) Metadata(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*MetadataResponse, error) {
 	out := new(MetadataResponse)
 	err := c.cc.Invoke(ctx, Source_Metadata_FullMethodName, in, out, opts...)
@@ -86,6 +97,7 @@ func (c *sourceClient) Metadata(ctx context.Context, in *emptypb.Empty, opts ...
 // for forward compatibility
 type SourceServer interface {
 	Stream(*StreamRequest, Source_StreamServer) error
+	HandleSingleDispatch(context.Context, *SingleDispatchRequest) (*SingleDispatchResponse, error)
 	Metadata(context.Context, *emptypb.Empty) (*MetadataResponse, error)
 	mustEmbedUnimplementedSourceServer()
 }
@@ -96,6 +108,9 @@ type UnimplementedSourceServer struct {
 
 func (UnimplementedSourceServer) Stream(*StreamRequest, Source_StreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
+}
+func (UnimplementedSourceServer) HandleSingleDispatch(context.Context, *SingleDispatchRequest) (*SingleDispatchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HandleSingleDispatch not implemented")
 }
 func (UnimplementedSourceServer) Metadata(context.Context, *emptypb.Empty) (*MetadataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Metadata not implemented")
@@ -134,6 +149,24 @@ func (x *sourceStreamServer) Send(m *StreamResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Source_HandleSingleDispatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SingleDispatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SourceServer).HandleSingleDispatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Source_HandleSingleDispatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SourceServer).HandleSingleDispatch(ctx, req.(*SingleDispatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Source_Metadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -159,6 +192,10 @@ var Source_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "source.Source",
 	HandlerType: (*SourceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "HandleSingleDispatch",
+			Handler:    _Source_HandleSingleDispatch_Handler,
+		},
 		{
 			MethodName: "Metadata",
 			Handler:    _Source_Metadata_Handler,

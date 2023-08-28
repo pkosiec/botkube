@@ -20,7 +20,7 @@ message StreamRequest {
 
 message StreamContext {
 	bool isInteractivitySupported = 1;
-	// kubeConfig is is kubeConfig represented in bytes
+	// kubeConfig is is kubeConfig represented in bytes.
 	bytes kubeConfig = 2;
 	string clusterName = 3;
 }
@@ -29,17 +29,20 @@ message StreamResponse {
 	bytes event = 1;
 }
 
-message ExternalEventRequest {
-	// Configs is a list of Source configurations specified by users.
-	repeated Config configs = 1;
-	// context holds context stream.
-	StreamContext context = 3;
+message SingleDispatchRequest {
+	// Config is Source configuration specified by users.
+	Config config = 1;
+	// context holds context for single dispatch.
+	SingleDispatchContext context = 2;
 }
 
-message ExternalEventResponse {
-	bytes event = 1;
+message SingleDispatchContext {
+	bool isInteractivitySupported = 1;
+	string clusterName = 2;
+}
 
-	optional bytes interactiveEvent = 2;
+message SingleDispatchResponse {
+	bytes event = 1;
 }
 
 message MetadataResponse {
@@ -47,10 +50,17 @@ message MetadataResponse {
 	string version = 1;
 	// description is a description of a given plugin.
 	string description = 2;
-	// json_schema is a JSON schema of a given plugin.
+	// json_schema is a JSON schema of a given plugin configuration.
 	JSONSchema json_schema = 3;
 	// dependencies is a list of dependencies of a given plugin.
 	map<string, Dependency> dependencies = 4;
+
+	optional IncomingWebhookPayload incoming_webhook_payload = 5;
+}
+
+message IncomingWebhookPayload {
+	// json_schema is a JSON schema of a given incoming webhook request body.
+	JSONSchema json_schema = 1;
 }
 
 message JSONSchema {
@@ -67,6 +77,6 @@ message Dependency {
 
 service Source {
 	rpc Stream(StreamRequest) returns (stream StreamResponse) {}
-	rpc HandleExternalEvent(ExternalEventRequest) returns (ExternalEventResponse) {}
+	rpc HandleSingleDispatch(SingleDispatchRequest) returns (SingleDispatchResponse) {}
 	rpc Metadata(google.protobuf.Empty) returns (MetadataResponse) {}
 }

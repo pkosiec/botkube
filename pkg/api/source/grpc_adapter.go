@@ -18,6 +18,7 @@ import (
 // Source defines the Botkube source plugin functionality.
 type Source interface {
 	Stream(context.Context, StreamInput) (StreamOutput, error)
+	HandleSingleDispatch(context.Context, SingleDispatchInput) (SingleDispatchOutput, error)
 	Metadata(context.Context) (api.MetadataOutput, error)
 }
 
@@ -49,6 +50,33 @@ type (
 		//   - api.NewCodeBlockMessage("body", true)
 		//   - api.NewPlaintextMessage("body", true)
 		Event chan Event
+	}
+
+	// SingleDispatchInput holds the input of the HandleSingleDispatch function.
+	SingleDispatchInput struct {
+		// Config is Source configuration specified by users.
+		Config *Config
+
+		// Context holds single dispatch context.
+		Context SingleDispatchInputContext
+	}
+
+	// SingleDispatchInputContext holds single dispatch context.
+	SingleDispatchInputContext struct {
+		// IsInteractivitySupported is set to true only if a communication platform supports interactive Messages.
+		IsInteractivitySupported bool
+
+		// ClusterName is the name of the underlying Kubernetes cluster which is provided by end user.
+		ClusterName string
+	}
+
+	// SingleDispatchOutput holds the output of the Stream function.
+	SingleDispatchOutput struct {
+		// Event represents the streamed events with message, raw object, and analytics data. It is from the start of plugin consumption.
+		// You can construct a complex message.data or just use one of our helper functions:
+		//   - api.NewCodeBlockMessage("body", true)
+		//   - api.NewPlaintextMessage("body", true)
+		Event Event
 	}
 
 	Event struct {
@@ -148,6 +176,35 @@ func (p *grpcClient) Stream(ctx context.Context, in StreamInput) (StreamOutput, 
 	return out, nil
 }
 
+func (p *grpcClient) HandleSingleDispatch(ctx context.Context, in SingleDispatchInput) (SingleDispatchOutput, error) {
+	request := &SingleDispatchRequest{
+		Config: in.Config,
+		Context: &SingleDispatchContext{
+			IsInteractivitySupported: in.Context.IsInteractivitySupported,
+			ClusterName:              in.Context.ClusterName,
+		},
+	}
+	out, err := p.client.HandleSingleDispatch(ctx, request)
+	if err != nil {
+		return SingleDispatchOutput{}, err
+	}
+
+	if len(out.Event) == 0 && string(out.Event) == "" {
+		return SingleDispatchOutput{
+			Event: Event{},
+		}, nil
+	}
+
+	var event Event
+	if err := json.Unmarshal(out.Event, &event); err != nil {
+		return SingleDispatchOutput{}, fmt.Errorf("while unmarshalling JSON message for single dispatch: %w", err)
+	}
+
+	return SingleDispatchOutput{
+		Event: event,
+	}, nil
+}
+
 func (p *grpcClient) Metadata(ctx context.Context) (api.MetadataOutput, error) {
 	resp, err := p.client.Metadata(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -160,6 +217,12 @@ func (p *grpcClient) Metadata(ctx context.Context) (api.MetadataOutput, error) {
 		JSONSchema: api.JSONSchema{
 			Value:  resp.GetJsonSchema().GetValue(),
 			RefURL: resp.GetJsonSchema().GetRefUrl(),
+		},
+		IncomingWebhookPayload: api.IncomingWebhookPayload{
+			JSONSchema: api.JSONSchema{
+				Value:  resp.IncomingWebhookPayload.GetJsonSchema().GetValue(),
+				RefURL: resp.IncomingWebhookPayload.GetJsonSchema().GetRefUrl(),
+			},
 		},
 		Dependencies: api.ConvertDependenciesToAPI(resp.Dependencies),
 	}, nil
@@ -181,6 +244,12 @@ func (p *grpcServer) Metadata(ctx context.Context, _ *emptypb.Empty) (*MetadataR
 		JsonSchema: &JSONSchema{
 			Value:  meta.JSONSchema.Value,
 			RefUrl: meta.JSONSchema.RefURL,
+		},
+		IncomingWebhookPayload: &IncomingWebhookPayload{
+			JsonSchema: &JSONSchema{
+				Value:  meta.IncomingWebhookPayload.JSONSchema.Value,
+				RefUrl: meta.IncomingWebhookPayload.JSONSchema.RefURL,
+			},
 		},
 		Dependencies: api.ConvertDependenciesFromAPI[*Dependency, Dependency](meta.Dependencies),
 	}, nil
@@ -225,6 +294,28 @@ func (p *grpcServer) Stream(req *StreamRequest, gstream Source_StreamServer) err
 			}
 		}
 	}
+}
+
+func (p *grpcServer) HandleSingleDispatch(ctx context.Context, req *SingleDispatchRequest) (*SingleDispatchResponse, error) {
+	out, err := p.Source.HandleSingleDispatch(ctx, SingleDispatchInput{
+		Config: req.Config,
+		Context: SingleDispatchInputContext{
+			IsInteractivitySupported: req.Context.IsInteractivitySupported,
+			ClusterName:              req.Context.ClusterName,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	marshalled, err := json.Marshal(out.Event)
+	if err != nil {
+		return nil, fmt.Errorf("while marshalling msg to byte: %w", err)
+	}
+
+	return &SingleDispatchResponse{
+		Event: marshalled,
+	}, nil
 }
 
 // Serve serves given plugins.

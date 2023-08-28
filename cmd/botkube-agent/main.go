@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kubeshop/botkube/internal/source"
-
 	"github.com/google/go-github/v53/github"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -37,6 +35,7 @@ import (
 	"github.com/kubeshop/botkube/internal/lifecycle"
 	"github.com/kubeshop/botkube/internal/loggerx"
 	"github.com/kubeshop/botkube/internal/plugin"
+	"github.com/kubeshop/botkube/internal/source"
 	"github.com/kubeshop/botkube/internal/status"
 	"github.com/kubeshop/botkube/internal/storage"
 	"github.com/kubeshop/botkube/pkg/action"
