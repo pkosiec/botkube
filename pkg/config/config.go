@@ -503,8 +503,9 @@ type CfgWatcher struct {
 }
 
 type IncomingWebhook struct {
-	Enabled bool `yaml:"enabled"`
-	Port    int  `yaml:"port"`
+	Enabled         bool          `yaml:"enabled"`
+	Port            int           `yaml:"port"`
+	DispatchTimeout time.Duration `yaml:"dispatchTimeout"`
 }
 
 // RemoteCfgWatcher describes configuration for watching the configuration using remote config provider.

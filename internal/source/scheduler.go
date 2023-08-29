@@ -172,7 +172,6 @@ func (d *Scheduler) schedulePlugin(ctx context.Context, isInteractivitySupported
 	if !exists {
 		return fmt.Errorf("source %q not found", sourceName)
 	}
-	var pluginContext config.PluginContext
 	for pluginName, pluginCfg := range srcConfig.Plugins {
 		if !pluginCfg.Enabled {
 			continue
@@ -184,19 +183,18 @@ func (d *Scheduler) schedulePlugin(ctx context.Context, isInteractivitySupported
 			return fmt.Errorf("while marshaling config for %s from source %s : %w", pluginName, sourceName, err)
 		}
 
-		pluginCfg := &source.Config{
+		pluginConfig := &source.Config{
 			RawYAML: rawYAML,
 		}
-
 		err = d.dispatcher.Dispatch(PluginDispatch{
 			ctx:                      ctx,
 			pluginName:               pluginName,
-			pluginConfig:             pluginCfg,
+			pluginConfig:             pluginConfig,
 			isInteractivitySupported: isInteractivitySupported,
 			sourceName:               sourceName,
 			sourceDisplayName:        srcConfig.DisplayName,
 			cfg:                      d.cfg,
-			pluginContext:            pluginContext,
+			pluginContext:            pluginCfg.Context,
 		})
 		if err != nil {
 			return fmt.Errorf("while starting plugin source %s: %w", pluginName, err)
@@ -205,7 +203,7 @@ func (d *Scheduler) schedulePlugin(ctx context.Context, isInteractivitySupported
 		d.startedSourcePlugins[sourceName] = append(d.startedSourcePlugins[sourceName], StartedSource{
 			SourceDisplayName:        srcConfig.DisplayName,
 			PluginName:               pluginName,
-			PluginConfig:             pluginCfg,
+			PluginConfig:             pluginConfig,
 			IsInteractivitySupported: isInteractivitySupported,
 		})
 	}

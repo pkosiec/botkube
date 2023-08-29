@@ -913,6 +913,7 @@ service:
   port: 2112
   targetPort: 2112
 
+# -- Configure Incoming webhook for source plugins.
 incomingWebhook:
   enabled: true
   port: 2115

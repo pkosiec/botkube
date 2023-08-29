@@ -1,6 +1,8 @@
 package source
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,7 +32,7 @@ func incomingWebhookRouter(log logrus.FieldLogger, cfg *config.Config, dispatche
 	router.HandleFunc(fmt.Sprintf("/sources/v1/{%s}", sourceNameVarName), func(writer http.ResponseWriter, request *http.Request) {
 		sourceName, ok := mux.Vars(request)[sourceNameVarName]
 		if !ok {
-			http.Error(writer, "sourceName is required", http.StatusBadRequest)
+			writeJSONError(log, writer, "Source name in path is required", http.StatusBadRequest)
 			return
 		}
 		logger := log.WithFields(logrus.Fields{
@@ -40,13 +42,13 @@ func incomingWebhookRouter(log logrus.FieldLogger, cfg *config.Config, dispatche
 
 		sourcePlugins, ok := startedSources[sourceName]
 		if !ok {
-			http.Error(writer, fmt.Sprintf("source %q not found", sourceName), http.StatusNotFound)
+			writeJSONError(log, writer, fmt.Sprintf("source %q not found", sourceName), http.StatusNotFound)
 			return
 		}
 
 		payload, err := io.ReadAll(request.Body)
 		if err != nil {
-			http.Error(writer, fmt.Sprintf("while reading request body: %s", err.Error()), http.StatusInternalServerError)
+			writeJSONError(log, writer, fmt.Sprintf("while reading request body: %s", err.Error()), http.StatusInternalServerError)
 			return
 		}
 		defer request.Body.Close()
@@ -60,7 +62,7 @@ func incomingWebhookRouter(log logrus.FieldLogger, cfg *config.Config, dispatche
 
 			err := dispatcher.DispatchSingle(SinglePluginDispatch{
 				PluginDispatch: PluginDispatch{
-					ctx:                      request.Context(),
+					ctx:                      context.Background(),
 					sourceName:               sourceName,
 					sourceDisplayName:        src.SourceDisplayName,
 					pluginName:               src.PluginName,
@@ -78,9 +80,43 @@ func incomingWebhookRouter(log logrus.FieldLogger, cfg *config.Config, dispatche
 
 		if multiErr.ErrorOrNil() != nil {
 			wrappedErr := fmt.Errorf("while dispatching message: %w", multiErr)
-			http.Error(writer, wrappedErr.Error(), http.StatusInternalServerError)
+			writeJSONError(log, writer, wrappedErr.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		writeJSONSuccess(log, writer)
 	}).Methods(http.MethodPost)
 	return router
+}
+
+func writeJSONError(log logrus.FieldLogger, w http.ResponseWriter, errMsg string, code int) {
+	response := struct {
+		Error string `json:"error"`
+	}{
+		Error: errMsg,
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(code)
+	err := json.NewEncoder(w).Encode(&response)
+	if err != nil {
+		log.Errorf("while writing error response: %s", err.Error())
+	}
+}
+
+func writeJSONSuccess(log logrus.FieldLogger, w http.ResponseWriter) {
+	response := struct {
+		Success bool `json:"success"`
+	}{
+		Success: true,
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(w).Encode(&response)
+	if err != nil {
+		log.Errorf("while writing success response: %s", err.Error())
+	}
 }

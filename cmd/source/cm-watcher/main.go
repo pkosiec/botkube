@@ -95,6 +95,10 @@ func (CMWatcher) HandleSingleDispatch(_ context.Context, in source.SingleDispatc
 		return source.SingleDispatchOutput{}, fmt.Errorf("while unmarshaling payload: %w", err)
 	}
 
+	if p.Message == "" {
+		return source.SingleDispatchOutput{}, fmt.Errorf("message cannot be empty")
+	}
+
 	msg := fmt.Sprintf("*Incoming webhook event:* %s", p.Message)
 	return source.SingleDispatchOutput{
 		Event: source.Event{
