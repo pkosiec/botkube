@@ -9,13 +9,15 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kubeshop/botkube/internal/httpx"
+	"github.com/kubeshop/botkube/pkg/config"
 	"github.com/kubeshop/botkube/pkg/multierror"
 )
 
-func NewIncomingWebhookServer(log logrus.FieldLogger, port int, dispatcher *Dispatcher, startedSources map[string][]StartedSource) *httpx.Server {
-	addr := fmt.Sprintf(":%d", port)
-	router := incomingWebhookRouter(log, dispatcher, startedSources)
+func NewIncomingWebhookServer(log logrus.FieldLogger, cfg *config.Config, dispatcher *Dispatcher, startedSources map[string][]StartedSource) *httpx.Server {
+	addr := fmt.Sprintf(":%d", cfg.IncomingWebhook.Port)
+	router := incomingWebhookRouter(log, cfg, dispatcher, startedSources)
 
+	log.Info("Starting server on %q...", addr)
 	return httpx.NewServer(log, addr, router)
 }
 
@@ -23,7 +25,7 @@ const (
 	sourceNameVarName = "sourceName"
 )
 
-func incomingWebhookRouter(log logrus.FieldLogger, dispatcher *Dispatcher, startedSources map[string][]StartedSource) *mux.Router {
+func incomingWebhookRouter(log logrus.FieldLogger, cfg *config.Config, dispatcher *Dispatcher, startedSources map[string][]StartedSource) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc(fmt.Sprintf("/sources/v1/{%s}", sourceNameVarName), func(writer http.ResponseWriter, request *http.Request) {
 		sourceName, ok := mux.Vars(request)[sourceNameVarName]
@@ -57,12 +59,17 @@ func incomingWebhookRouter(log logrus.FieldLogger, dispatcher *Dispatcher, start
 			}).Debug("Dispatching message...")
 
 			err := dispatcher.DispatchSingle(SinglePluginDispatch{
-				ctx:                      request.Context(),
-				sourceName:               sourceName,
-				pluginName:               src.PluginName,
-				pluginConfig:             src.PluginConfig,
-				isInteractivitySupported: src.IsInteractivitySupported,
-				payload:                  payload,
+				PluginDispatch: PluginDispatch{
+					ctx:                      request.Context(),
+					sourceName:               sourceName,
+					sourceDisplayName:        src.SourceDisplayName,
+					pluginName:               src.PluginName,
+					pluginConfig:             src.PluginConfig,
+					isInteractivitySupported: src.IsInteractivitySupported,
+					cfg:                      cfg,
+					pluginContext:            config.PluginContext{},
+				},
+				payload: payload,
 			})
 			if err != nil {
 				multiErr = multierror.Append(multiErr, fmt.Errorf(`while dispatching message for "%s.%s": %w`, sourceName, src.PluginName, err))
@@ -74,6 +81,6 @@ func incomingWebhookRouter(log logrus.FieldLogger, dispatcher *Dispatcher, start
 			http.Error(writer, wrappedErr.Error(), http.StatusInternalServerError)
 			return
 		}
-	})
+	}).Methods(http.MethodPost)
 	return router
 }

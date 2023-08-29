@@ -27,15 +27,12 @@ type PluginDispatch struct {
 }
 
 type SinglePluginDispatch struct {
-	ctx                      context.Context
-	sourceName               string
-	pluginName               string
-	pluginConfig             *source.Config
-	isInteractivitySupported bool
-	payload                  []byte
+	PluginDispatch
+	payload []byte
 }
 
 type StartedSource struct {
+	SourceDisplayName        string
 	PluginName               string
 	PluginConfig             *source.Config
 	IsInteractivitySupported bool
@@ -206,6 +203,7 @@ func (d *Scheduler) schedulePlugin(ctx context.Context, isInteractivitySupported
 		}
 
 		d.startedSourcePlugins[sourceName] = append(d.startedSourcePlugins[sourceName], StartedSource{
+			SourceDisplayName:        srcConfig.DisplayName,
 			PluginName:               pluginName,
 			PluginConfig:             pluginCfg,
 			IsInteractivitySupported: isInteractivitySupported,

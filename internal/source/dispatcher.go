@@ -137,7 +137,28 @@ func (d *Dispatcher) Dispatch(dispatch PluginDispatch) error {
 }
 
 func (d *Dispatcher) DispatchSingle(dispatch SinglePluginDispatch) error {
-	// TODO: implement
+	sourceClient, err := d.manager.GetSource(dispatch.pluginName)
+	if err != nil {
+		return fmt.Errorf("while getting source client for %s: %w", dispatch.pluginName, err)
+	}
+
+	d.log.Infof("Dispatching single message for %s", dispatch.pluginName)
+
+	ctx := dispatch.ctx
+	out, err := sourceClient.HandleSingleDispatch(ctx, source.SingleDispatchInput{
+		Config:  dispatch.pluginConfig,
+		Payload: dispatch.payload,
+		Context: source.SingleDispatchInputContext{
+			IsInteractivitySupported: dispatch.isInteractivitySupported,
+			ClusterName:              dispatch.cfg.Settings.ClusterName,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf(`while handling single dispatch for "%s.%s" source: %w`, dispatch.sourceName, dispatch.pluginName, err)
+	}
+
+	d.dispatchMsg(ctx, out.Event, dispatch.PluginDispatch)
+
 	return nil
 }
 

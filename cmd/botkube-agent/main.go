@@ -400,7 +400,7 @@ func run(ctx context.Context) (err error) {
 	if conf.IncomingWebhook.Enabled {
 		incomingWebhookSrv := source.NewIncomingWebhookServer(
 			logger.WithField(componentLogFieldKey, "Incoming Webhook Server"),
-			conf.IncomingWebhook.Port,
+			conf,
 			sourcePluginDispatcher,
 			scheduler.StartedSourcePlugins(),
 		)
