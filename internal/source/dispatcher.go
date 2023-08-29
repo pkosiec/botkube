@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubeshop/botkube/internal/analytics"
@@ -116,6 +118,11 @@ func (d *Dispatcher) Dispatch(dispatch PluginDispatch) error {
 		},
 	})
 	if err != nil {
+		statusErr, ok := status.FromError(err)
+		if ok && statusErr.Code() == codes.Unimplemented {
+			log.Debugf("Source %q does not implement streaming. Returning without error...", dispatch.pluginName)
+		}
+
 		return fmt.Errorf(`while opening stream for "%s.%s" source: %w`, dispatch.sourceName, dispatch.pluginName, err)
 	}
 
@@ -136,6 +143,7 @@ func (d *Dispatcher) Dispatch(dispatch PluginDispatch) error {
 	return nil
 }
 
+// DispatchSingle dispatches a single message for a given plugin.
 func (d *Dispatcher) DispatchSingle(dispatch SinglePluginDispatch) error {
 	sourceClient, err := d.manager.GetSource(dispatch.pluginName)
 	if err != nil {

@@ -15,6 +15,7 @@ type pluginDispatcher interface {
 	Dispatch(dispatch PluginDispatch) error
 }
 
+// PluginDispatch holds information about source plugin.
 type PluginDispatch struct {
 	ctx                      context.Context
 	pluginName               string
@@ -26,11 +27,13 @@ type PluginDispatch struct {
 	pluginContext            config.PluginContext
 }
 
+// SinglePluginDispatch is a wrapper for PluginDispatch that holds the payload.
 type SinglePluginDispatch struct {
 	PluginDispatch
 	payload []byte
 }
 
+// StartedSource holds information about started source plugin.
 type StartedSource struct {
 	SourceDisplayName        string
 	PluginName               string

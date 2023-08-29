@@ -30,6 +30,7 @@ type MetadataOutput struct {
 	Dependencies map[string]Dependency
 }
 
+// IncomingWebhookPayload contains the incoming webhook payload information.
 type IncomingWebhookPayload struct {
 	// JSONSchema is a JSON schema for a given incoming webhook payload.
 	JSONSchema JSONSchema

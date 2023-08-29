@@ -502,10 +502,10 @@ type CfgWatcher struct {
 	Deployment         K8sResourceRef `yaml:"deployment"`
 }
 
+// IncomingWebhook contains configuration for incoming webhook.
 type IncomingWebhook struct {
-	Enabled         bool          `yaml:"enabled"`
-	Port            int           `yaml:"port"`
-	DispatchTimeout time.Duration `yaml:"dispatchTimeout"`
+	Enabled bool `yaml:"enabled"`
+	Port    int  `yaml:"port"`
 }
 
 // RemoteCfgWatcher describes configuration for watching the configuration using remote config provider.

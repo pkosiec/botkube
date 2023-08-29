@@ -88,6 +88,7 @@ type payload struct {
 	Message string
 }
 
+// HandleSingleDispatch handles incoming payload and returns an event based on it.
 func (CMWatcher) HandleSingleDispatch(_ context.Context, in source.SingleDispatchInput) (source.SingleDispatchOutput, error) {
 	var p payload
 	err := json.Unmarshal(in.Payload, &p)
