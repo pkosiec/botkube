@@ -92,6 +92,12 @@ func (i *IndexBuilder) Build(dir, urlBasePath, pluginNameFilter string, skipChec
 				RefURL: meta.JSONSchema.RefURL,
 			},
 			URLs: urls,
+			IncomingWebhookPayload: IncomingWebhookPayload{
+				JSONSchema: JSONSchema{
+					Value:  meta.IncomingWebhookPayload.JSONSchema.Value,
+					RefURL: meta.IncomingWebhookPayload.JSONSchema.RefURL,
+				},
+			},
 		})
 	}
 

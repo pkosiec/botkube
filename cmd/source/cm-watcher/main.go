@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -60,6 +61,9 @@ func (CMWatcher) Metadata(_ context.Context) (api.MetadataOutput, error) {
 		Version:     version,
 		Description: description,
 		JSONSchema:  jsonSchema(),
+		IncomingWebhookPayload: api.IncomingWebhookPayload{
+			JSONSchema: incomingWebhookJSONSchema(),
+		},
 	}, nil
 }
 
@@ -80,8 +84,23 @@ func (CMWatcher) Stream(ctx context.Context, in source.StreamInput) (source.Stre
 	return out, nil
 }
 
-func (CMWatcher) HandleSingleDispatch(ctx context.Context, in source.SingleDispatchInput) (source.SingleDispatchOutput, error) {
-	//TODO:
+type payload struct {
+	Message string
+}
+
+func (CMWatcher) HandleSingleDispatch(_ context.Context, in source.SingleDispatchInput) (source.SingleDispatchOutput, error) {
+	var p payload
+	err := json.Unmarshal(in.Payload, &p)
+	if err != nil {
+		return source.SingleDispatchOutput{}, fmt.Errorf("while unmarshaling payload: %w", err)
+	}
+
+	msg := fmt.Sprintf("*Incoming webhook event:* %s", p.Message)
+	return source.SingleDispatchOutput{
+		Event: source.Event{
+			Message: api.NewPlaintextMessage(msg, true),
+		},
+	}, nil
 }
 
 func listenEvents(ctx context.Context, kubeConfig []byte, obj Object, sink chan source.Event) {
@@ -143,5 +162,22 @@ func jsonSchema() api.JSONSchema {
 			"properties": {},
 			"required": []
 		}`, description),
+	}
+}
+
+func incomingWebhookJSONSchema() api.JSONSchema {
+	return api.JSONSchema{
+		Value: heredoc.Doc(`{
+		  "$schema": "http://json-schema.org/draft-07/schema#",
+		  "type": "object",
+		  "properties": {
+			"message": {
+			  "type": "string"
+			}
+		  },
+		  "required": [
+			"message"
+		  ]
+		}`),
 	}
 }

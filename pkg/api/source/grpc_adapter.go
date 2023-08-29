@@ -54,6 +54,9 @@ type (
 
 	// SingleDispatchInput holds the input of the HandleSingleDispatch function.
 	SingleDispatchInput struct {
+		// Payload is the payload of the incoming webhook.
+		Payload []byte
+
 		// Config is Source configuration specified by users.
 		Config *Config
 
@@ -178,7 +181,8 @@ func (p *grpcClient) Stream(ctx context.Context, in StreamInput) (StreamOutput, 
 
 func (p *grpcClient) HandleSingleDispatch(ctx context.Context, in SingleDispatchInput) (SingleDispatchOutput, error) {
 	request := &SingleDispatchRequest{
-		Config: in.Config,
+		Payload: in.Payload,
+		Config:  in.Config,
 		Context: &SingleDispatchContext{
 			IsInteractivitySupported: in.Context.IsInteractivitySupported,
 			ClusterName:              in.Context.ClusterName,
@@ -298,7 +302,8 @@ func (p *grpcServer) Stream(req *StreamRequest, gstream Source_StreamServer) err
 
 func (p *grpcServer) HandleSingleDispatch(ctx context.Context, req *SingleDispatchRequest) (*SingleDispatchResponse, error) {
 	out, err := p.Source.HandleSingleDispatch(ctx, SingleDispatchInput{
-		Config: req.Config,
+		Payload: req.Payload,
+		Config:  req.Config,
 		Context: SingleDispatchInputContext{
 			IsInteractivitySupported: req.Context.IsInteractivitySupported,
 			ClusterName:              req.Context.ClusterName,

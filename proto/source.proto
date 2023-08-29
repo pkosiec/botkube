@@ -30,10 +30,12 @@ message StreamResponse {
 }
 
 message SingleDispatchRequest {
+	// Payload is a payload of a single dispatch.
+	bytes payload = 1;
 	// Config is Source configuration specified by users.
-	Config config = 1;
+	Config config = 2;
 	// context holds context for single dispatch.
-	SingleDispatchContext context = 2;
+	SingleDispatchContext context = 3;
 }
 
 message SingleDispatchContext {

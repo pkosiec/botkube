@@ -23,7 +23,7 @@ type MetadataOutput struct {
 	Description string
 	// JSONSchema is a JSON schema for a given plugin configuration.
 	JSONSchema JSONSchema
-	
+
 	IncomingWebhookPayload IncomingWebhookPayload
 
 	// Dependencies holds the dependencies for a given platform binary.
